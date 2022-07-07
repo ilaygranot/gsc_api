@@ -35,7 +35,7 @@ def authorize_creds(fullTmpClientSecretPath):
     # Prepare credentials and authorize HTTP
     # If authenticated credentials don't exist, open Browser to authenticate
     auth_uri = flow.step1_get_authorize_url('https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com/')
-    st.warning('Go to the following link in your browser and try again:' + str(auth_uri))
+    st.warning('Go to the following link in your browser and try again:\n'+str(auth_uri))
     credentials = tools.run_flow(flow, flags)
     http = credentials.authorize(http=httplib2.Http())
     webmasters_service = build('searchconsole', 'v1', http=http)
