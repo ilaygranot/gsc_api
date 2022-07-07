@@ -25,22 +25,23 @@ uploaded_creds = None
 
 # Check if we are logged into Google
 def authorize_creds(fullTmpClientSecretPath):
+    print("entering authorize_creds...")
     # Variable parameter that controls the set of resources that the access token permits.
     SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
     # Create a parser to be able to open browser for Authorization
     parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, parents=[tools.argparser])
     flags = parser.parse_args([])
+    print("entering flow...")
     flow = client.flow_from_clientsecrets(fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(fullTmpClientSecretPath))
     # Prepare credentials and authorize HTTP
-    # If they exist, get them from the storage object
-    # credentials will get written back to a file.
-    storage = file.Storage('authorizedcreds.dat')
-    credentials = storage.get()
     # If authenticated credentials don't exist, open Browser to authenticate
-    if credentials is None or credentials.invalid:
-        credentials = tools.run_flow(flow, storage, flags)
+    print("entering tools...")
+    credentials = tools.run_flow(flow, flags)
+    print("entering auth...")
     http = credentials.authorize(http=httplib2.Http())
+    print("entering service...")
     webmasters_service = build('searchconsole', 'v1', http=http)
+    print("entering return...")
     return webmasters_service
  
 # Convert datetime to string
