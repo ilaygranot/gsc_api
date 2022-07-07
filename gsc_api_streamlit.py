@@ -12,7 +12,7 @@ from oauth2client import client
 from oauth2client import file
 from oauth2client import tools
 from urllib.parse import urlparse, parse_qs
-import os
+import os, pickle
 
 # Make sure we have a temp directory to dump cred files for multiple users:
 if not os.path.exists("tempDir"):
@@ -35,7 +35,8 @@ def authorize_creds(fullTmpClientSecretPath):
     # Prepare credentials and authorize HTTP
     # If authenticated credentials don't exist, open Browser to authenticate
     print("---test start---")
-    print(flow)
+    pickled = str(pickle.dumps(flow, 0))
+    print(pickled)
     print("---test end---")
     credentials = tools.run_flow(flow, flags)
     http = credentials.authorize(http=httplib2.Http())
