@@ -34,7 +34,7 @@ def authorize_creds(fullTmpClientSecretPath):
     flow = client.flow_from_clientsecrets(fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(fullTmpClientSecretPath))
     # Prepare credentials and authorize HTTP
     # If authenticated credentials don't exist, open Browser to authenticate
-    auth_uri = flow.step1_get_authorize_url()
+    auth_uri = flow.redirect_uri
     st.warning('Go to the following link in your browser and try again:' + str(auth_uri))
     credentials = tools.run_flow(flow, flags)
     http = credentials.authorize(http=httplib2.Http())
