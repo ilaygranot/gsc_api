@@ -2,17 +2,12 @@ import json
 import pandas as pd
 import streamlit as st
 import datetime
-# from datetime import date, timedelta
 import httplib2
 from googleapiclient.discovery import build
-# from oauth2client.client import OAuth2WebServerFlow
 from collections import defaultdict
-import argparse
 from oauth2client import client
-from oauth2client import file
 from oauth2client import tools
-from urllib.parse import urlparse, parse_qs
-import os, pickle
+import os
 from plotly import figure_factory as ff
 
 # Make sure we have a temp directory to dump cred files for multiple users:
