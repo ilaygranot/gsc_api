@@ -13,6 +13,7 @@ from oauth2client import file
 from oauth2client import tools
 from urllib.parse import urlparse, parse_qs
 import os, pickle
+from plotly import figure_factory as ff
 
 # Make sure we have a temp directory to dump cred files for multiple users:
 if not os.path.exists("tempDir"):
@@ -29,14 +30,20 @@ def authorize_creds(fullTmpClientSecretPath):
     # Variable parameter that controls the set of resources that the access token permits.
     SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
     # Create a parser to be able to open browser for Authorization
-    parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, parents=[tools.argparser])
-    flags = parser.parse_args([])
+    #parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, parents=[tools.argparser])
+    #flags = parser.parse_args([])
     flow = client.flow_from_clientsecrets(fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(fullTmpClientSecretPath))
     # Prepare credentials and authorize HTTP
     # If authenticated credentials don't exist, open Browser to authenticate
     auth_uri = flow.step1_get_authorize_url('urn:ietf:wg:oauth:2.0:oob')
     st.warning('Go to the following link in your browser and try again:\n'+str(auth_uri))
-    credentials = tools.run_flow(flow, flags)
+    code = None
+    # wait for input in streamlit
+    while code is None:
+        st.text("Waiting for input...")
+        code = st.text_input('Enter Verification Code and Submit Again:')
+    #credentials = tools.run_flow(flow, flags)
+    credentials = flow.step2_exchange(code)
     http = credentials.authorize(http=httplib2.Http())
     webmasters_service = build('searchconsole', 'v1', http=http)
     return webmasters_service
@@ -225,6 +232,8 @@ with st.form("form"):
     property = st.text_input("Property Name (required)")
     # Number of Rows
     numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
+    # branded kw 
+    branded_kw = st.text_input('Branded Keyword')
     # Date: Start Date + End Date
     st.write('--------------------')
     st.write('__Default:__ `Last 28 days`')
@@ -285,6 +294,11 @@ with st.form("form"):
             st.write("CSV:", csv_file)
             # Generate CSV
             csv_file_data = pd.read_csv(csv_file)
+            # Add Branded Column
+            csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
+            # If branded_kw is empty then drop branded column
+            if branded_kw == '':
+                csv_file_data = csv_file_data.drop(columns=['Branded'])
             # Preview CSV
             st.dataframe(csv_file_data)
             # Convert CSV to DF
