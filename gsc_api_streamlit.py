@@ -17,31 +17,6 @@ if not os.path.exists("tempDir"):
 # Global Variables:
 can_download = False # Handle Download Button State
 csv = None
-uploaded_creds = None
-
-# Check if we are logged into Google
-def authorize_creds(fullTmpClientSecretPath):
-    print("entering authorize_creds...")
-    # Variable parameter that controls the set of resources that the access token permits.
-    SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly']
-    # Create a parser to be able to open browser for Authorization
-    #parser = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter, parents=[tools.argparser])
-    #flags = parser.parse_args([])
-    flow = client.flow_from_clientsecrets(fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(fullTmpClientSecretPath))
-    # Prepare credentials and authorize HTTP
-    # If authenticated credentials don't exist, open Browser to authenticate
-    auth_uri = flow.step1_get_authorize_url('urn:ietf:wg:oauth:2.0:oob')
-    st.warning('Go to the following link in your browser and try again:\n'+str(auth_uri))
-    code = None
-    # wait for input in streamlit
-    while code is None:
-        st.text("Waiting for input...")
-        code = st.text_input('Enter Verification Code and Submit Again:')
-    #credentials = tools.run_flow(flow, flags)
-    credentials = flow.step2_exchange(code)
-    http = credentials.authorize(http=httplib2.Http())
-    webmasters_service = build('searchconsole', 'v1', http=http)
-    return webmasters_service
  
 # Convert datetime to string
 def dt_to_str(date, fmt='%Y-%m-%d'):
@@ -160,14 +135,13 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
     return len(response['rows'])
 
 # Connect the web interface to Google
-def scan_website(fullTmpClientSecretPath, my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression):
+def scan_website(webmasters_service, my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression):
     current_time = str(datetime.datetime.now())
     current_time = "_".join(current_time.split()).replace(":","-")
     current_time = current_time[:-7]
     rowLimit = int(max_rows)
     output = os.path.join("tempDir", 'gsc_api_' + current_time + '.csv')
     # Create function to extract all the data
-    webmasters_service = authorize_creds(fullTmpClientSecretPath)     # Get credentials to log in the api
     scDict = defaultdict(list)                      # initialize empty Dict to store data
     overall_limit = 25000
     startRow = 0
@@ -207,100 +181,142 @@ def convert_df(df):
 
 # Streamlit title
 st.title("Google Search Console 🎃")
+st.warning('Personal Use Only!')
 
 # Upload Client Json File
-uploaded_file = st.file_uploader("📄 Choose an .json file", "json")
-st.write("Note: The file is deleted after use.")
-st.warning('Personal Use Only!')
-have_file = False
-if uploaded_file is not None:
-    uploaded_creds = []
-    for line in uploaded_file:
-        uploaded_creds.append(json.loads(line))
-    have_file = True
-else:
-    have_file = False
-
-# Streamlit Form
-with st.form("form"):
-    # Get Input from Users:
-    property = st.text_input("Property Name (required)")
-    # Number of Rows
-    numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
-    # branded kw 
-    branded_kw = st.text_input('Branded Keyword')
-    # Date: Start Date + End Date
-    st.write('--------------------')
-    st.write('__Default:__ `Last 28 days`')
-    col1, col2 = st.columns(2)
-    with col1:
-        start_date = st.date_input(
-        "Start Date:",
-        datetime.date.today() - datetime.timedelta(28))
-    with col2:
-        end_date = st.date_input(
-        "End Date:",
-        datetime.date.today() - datetime.timedelta(2))
-    # Page
-    st.write('--------------------')
-    col1, col2 = st.columns(2)
-    with col1:
-        page_expression = st.text_input('Page Expression')
-    with col2:
-        page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-    # Query
-    col1, col2 = st.columns(2)
-    with col1:
-        query_expression = st.text_input('Query Expression')
-    with col2:
-        query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-    # Submit button
-    submitted = st.form_submit_button("Submit")
-    if submitted:
-        if property == '':
-            st.error("Please fill out the property field")
-        elif uploaded_file is None:
-            st.error('Please select a file first!')
-        else:
-            # Validate Inputs
-            if page_expression == '':
-                page_operator = 'None'
-            if query_operator == '':
-                query_operator = 'None'
-            # Debug
-            # st.write('Uploaded File: ', uploaded_file.name)
-            # st.write('Property: ', property)
-            # st.write('Start Date: ', start_date)
-            # st.write('End Date: ', end_date)
-            # st.write('Page Expression: ', page_expression)
-            # st.write('Page Operator: ', page_operator)
-            # st.write('Query Expression: ', query_expression)
-            # st.write('Query Operator: ', query_operator)
-            # Upload the creds file
-            current_time = str(datetime.datetime.now())
-            current_time = "_".join(current_time.split()).replace(":","-")
-            current_time = current_time[:-7]
-            tmpClientSecret = 'client_secret_' + current_time + '.json'
-            fullTmpClientSecretPath = os.path.join("tempDir", tmpClientSecret)
-            with open(fullTmpClientSecretPath,"wb") as f:
-                f.write(uploaded_file.getbuffer())
-            # Scan website using google:
-            csv_file = scan_website(fullTmpClientSecretPath, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-            st.write("CSV:", csv_file)
-            # Generate CSV
-            csv_file_data = pd.read_csv(csv_file)
-            # Add Branded Column
-            csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
-            # If branded_kw is empty then drop branded column
-            if branded_kw == '':
-                csv_file_data = csv_file_data.drop(columns=['Branded'])
-            # Preview CSV
-            st.dataframe(csv_file_data)
-            # Convert CSV to DF
-            csv = convert_df(csv_file_data)
-            can_download = True
+u_placeholder = st.empty()
+if 'uploaded_file' not in st.session_state or st.session_state.uploaded_file is None:
+    with u_placeholder.form("upload"):
+        uploaded_file = st.file_uploader("📄 Choose an .json file", "json")
+        st.write("Note: The file is deleted after use.")
+        creds_submitted = st.form_submit_button("Upload")
+        if creds_submitted:
+            if uploaded_file is not None:
+                st.session_state.uploaded_file = uploaded_file
+                u_placeholder.empty()
+            else:
+                st.error("Please select your json credentials file")
+if 'uploaded_file' in st.session_state:
+    # Upload the creds file
+    current_time = str(datetime.datetime.now())
+    current_time = "_".join(current_time.split()).replace(":","-")
+    current_time = current_time[:-7]
+    tmpClientSecret = 'client_secret_' + current_time + '.json'
+    st.session_state.fullTmpClientSecretPath = os.path.join("tempDir", tmpClientSecret)
+    with open(st.session_state.fullTmpClientSecretPath,"wb") as f:
+        f.write(st.session_state.uploaded_file.getbuffer())
+    # Show streamlit forms
+    webmasters_service = None
+    placeholder = st.empty()
+    if 'webmasters_service' not in st.session_state:
+        with placeholder.form("login"):
+            # Get credentials to log in the api
+            SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
+            flow = client.flow_from_clientsecrets(st.session_state.fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(st.session_state.fullTmpClientSecretPath))
             # Delete the creds file after usage (cleanup)
-            os.remove(fullTmpClientSecretPath)
+            os.remove(st.session_state.fullTmpClientSecretPath)
+            # Prepare credentials and authorize HTTP
+            auth_uri = flow.step1_get_authorize_url('urn:ietf:wg:oauth:2.0:oob')
+            # Handle Code Submit
+            login_submitted = st.form_submit_button("Validate")
+            code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
+            if login_submitted:
+                # Send the code to get the credentials
+                try:
+                    credentials = flow.step2_exchange(code)
+                    http = credentials.authorize(http=httplib2.Http())
+                    webmasters_service = build('searchconsole', 'v1', http=http)
+                    if 'webmasters_service' not in st.session_state:
+                        st.session_state.webmasters_service = webmasters_service
+                    # Get Properties
+                    site_list = webmasters_service.sites().list().execute()
+                    # Filter for verified websites
+                    verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
+                                        if s['permissionLevel'] != 'siteUnverifiedUser'
+                                            and s['siteUrl'][:4] == 'http']
+                    if 'verified_sites_urls' not in st.session_state:
+                        st.session_state.verified_sites_urls = verified_sites_urls
+                    placeholder.empty()
+                except:
+                    st.error('Invalid Verification Code')
+                    st.success('Go to the following link in your browser and try again:\n'+str(auth_uri))
+            else:
+                st.success('Go to the following link in your browser and try again:\n'+str(auth_uri))
+    if 'verified_sites_urls' in st.session_state:
+        # Streamlit Form
+        with st.form("form"):
+            properties = None
+            # Show Properties
+            property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
+            # Number of Rows
+            numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
+            # branded kw 
+            branded_kw = st.text_input('Branded Keyword')
+            # Date: Start Date + End Date
+            st.write('--------------------')
+            st.write('__Default:__ `Last 28 days`')
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input(
+                "Start Date:",
+                datetime.date.today() - datetime.timedelta(28))
+            with col2:
+                end_date = st.date_input(
+                "End Date:",
+                datetime.date.today() - datetime.timedelta(2))
+            # Page
+            st.write('--------------------')
+            col1, col2 = st.columns(2)
+            with col1:
+                page_expression = st.text_input('Page Expression')
+            with col2:
+                page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Query
+            col1, col2 = st.columns(2)
+            with col1:
+                query_expression = st.text_input('Query Expression')
+            with col2:
+                query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Submit button
+            submitted = st.form_submit_button("Submit")
+            if submitted:
+                if 'uploaded_file' not in st.session_state:
+                    st.error('Please select a file first!')
+                elif 'webmasters_service' not in st.session_state:
+                    st.error('Please validate your credentials first!')
+                else:
+                    # Validate Inputs
+                    if page_expression == '':
+                        page_operator = 'None'
+                    if query_operator == '':
+                        query_operator = 'None'
+                    # Debug
+                    # st.write('Property: ', property)
+                    # st.write('Start Date: ', start_date)
+                    # st.write('End Date: ', end_date)
+                    # st.write('Page Expression: ', page_expression)
+                    # st.write('Page Operator: ', page_operator)
+                    # st.write('Query Expression: ', query_expression)
+                    # st.write('Query Operator: ', query_operator)
+                    # st.write("CSV:", csv_file)
+                    # Scan website using google:
+                    csv_file = scan_website(st.session_state.webmasters_service, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+                    # Delete the creds file after usage (cleanup)
+                    os.remove(st.session_state.fullTmpClientSecretPath)
+                    # Generate CSV
+                    csv_file_data = pd.read_csv(csv_file)
+                    # Add Branded Column
+                    csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
+                    # If branded_kw is empty then drop branded column
+                    if branded_kw == '':
+                        csv_file_data = csv_file_data.drop(columns=['Branded'])
+                    # Preview CSV
+                    st.write("Preview:")
+                    st.dataframe(csv_file_data)
+                    st.success("Successfully found " + str(len(csv_file_data)) + " records.")
+                    # Convert CSV to DF
+                    csv = convert_df(csv_file_data)
+                    can_download = True
 
 # Show CSV Download Button
 if can_download and csv is not None:
