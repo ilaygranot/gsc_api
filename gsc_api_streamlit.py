@@ -13,8 +13,6 @@ from oauth2client import tools
 import os
 from plotly import figure_factory as ff
 
-st.write('rre')
-
 # Client configuration for an OAuth 2.0 web server application
 # (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
 CLIENT_CONFIG = {'web': {
@@ -220,7 +218,7 @@ if 'webmasters_service' not in st.session_state:
         # Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes='true')
     # Handle Code Submit
-    st.markdown('<a href="javascript:window.open(\'' + authorization_url + '\');window.close();" target="_self">Login via Google</a>', unsafe_allow_html=True)
+    st.markdown('<a href="javascript:window.open(\'' + authorization_url + '\','_parent',''); window.close();" target="_self">Login via Google</a>', unsafe_allow_html=True)
     if 1==0:
         # Send the code to get the credentials
         try:
