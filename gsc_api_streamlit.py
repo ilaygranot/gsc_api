@@ -8,8 +8,6 @@ import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
-from oauth2client import client
-from oauth2client import tools
 import os
 from plotly import figure_factory as ff
 
@@ -232,9 +230,9 @@ if 'webmasters_service' not in st.session_state:
         st.write('using code:' + code)
         # Send the code to get the credentials
         try:
-            credentials = flow.step2_exchange(code)
-            http = credentials.authorize(http=httplib2.Http())
-            webmasters_service = build('searchconsole', 'v1', http=http)
+            # credentials = flow.step2_exchange(code)
+            # http = credentials.authorize(http=httplib2.Http())
+            webmasters_service = build('searchconsole', 'v1', creds=code)
             if 'webmasters_service' not in st.session_state:
                 st.session_state.webmasters_service = webmasters_service
             # Get Properties
