@@ -205,7 +205,7 @@ if 'webmasters_service' not in st.session_state:
     flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
     # Indicate where the API server will redirect the user after the user completes
     # the authorization flow. The redirect URI is required.
-    flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
+    flow.redirect_uri = st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"]
     # Generate URL for request to Google's OAuth 2.0 server.
     # Use kwargs to set optional request parameters.
     authorization_url, state = flow.authorization_url(
