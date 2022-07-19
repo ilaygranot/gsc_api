@@ -219,12 +219,6 @@ if 'webmasters_service' not in st.session_state:
             access_type='offline',
             # Enable incremental authorization. Recommended as a best practice.
             include_granted_scopes='true')
-        my_js = """
-        alert('navigating to {authorization_url}')
-        location.href = '{authorization_url}';
-        """.format(authorization_url=authorization_url)
-        my_html = f"<script>{my_js}</script>"
-        html(my_html)
         # Handle Code Submit
         login_submitted = st.form_submit_button("Validate")
         code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
@@ -247,6 +241,8 @@ if 'webmasters_service' not in st.session_state:
                 placeholder.empty()
             except:
                 st.error('Invalid Verification Code')
+                st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
+        else:
                 st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
 if 'verified_sites_urls' in st.session_state:
     # Streamlit Form
