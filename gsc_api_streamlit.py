@@ -230,9 +230,9 @@ if 'webmasters_service' not in st.session_state:
         st.write('using code:' + code)
         # Send the code to get the credentials
         try:
-            # credentials = flow.step2_exchange(code)
-            # http = credentials.authorize(http=httplib2.Http())
-            webmasters_service = build('searchconsole', 'v1', creds=code)
+            credentials = flow.fetch_token(code)
+            http = credentials.authorize(http=httplib2.Http())
+            webmasters_service = build('searchconsole', 'v1', http=http)
             if 'webmasters_service' not in st.session_state:
                 st.session_state.webmasters_service = webmasters_service
             # Get Properties
