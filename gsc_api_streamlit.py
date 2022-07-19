@@ -229,6 +229,7 @@ if 'webmasters_service' not in st.session_state:
         has_code = False
         pass
     if has_code:
+        st.write('using code:' + code)
         # Send the code to get the credentials
         try:
             credentials = flow.step2_exchange(code)
@@ -246,7 +247,6 @@ if 'webmasters_service' not in st.session_state:
                 st.session_state.verified_sites_urls = verified_sites_urls
         except:
             st.error('Invalid Verification Code')
-            st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
 if 'verified_sites_urls' in st.session_state:
     # Streamlit Form
     with st.form("form"):
