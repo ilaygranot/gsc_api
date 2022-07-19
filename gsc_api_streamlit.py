@@ -13,6 +13,8 @@ from oauth2client import tools
 import os
 from plotly import figure_factory as ff
 
+st.write('rre')
+
 # Client configuration for an OAuth 2.0 web server application
 # (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
 CLIENT_CONFIG = {'web': {
