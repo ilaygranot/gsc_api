@@ -243,8 +243,8 @@ if 'webmasters_service' not in st.session_state:
                                     and s['siteUrl'][:4] == 'http']
             if 'verified_sites_urls' not in st.session_state:
                 st.session_state.verified_sites_urls = verified_sites_urls
-        except:
-            st.error('Invalid Verification Code')
+        except Exception as e:
+            st.error('Invalid Verification Code:\n'+str(e))
 if 'verified_sites_urls' in st.session_state:
     # Streamlit Form
     with st.form("form"):
