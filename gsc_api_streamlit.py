@@ -220,8 +220,9 @@ if 'webmasters_service' not in st.session_state:
     # Handle Code Submit
     st.markdown('<a href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
     google_parms = st.experimental_get_query_params()
-    st.write(google_parms.code)
-    st.write(google_parms.test)
+    if google_parms != {}:
+        st.write(google_parms.code)
+        st.write(google_parms.test)
     if 1==0:
         # Send the code to get the credentials
         try:
