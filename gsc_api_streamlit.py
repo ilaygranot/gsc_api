@@ -195,7 +195,6 @@ def convert_df(df):
 
 # Streamlit title
 st.title("Google Search Console 🎃")
-st.warning('Personal Use Only!!')
 
 # Show streamlit forms
 webmasters_service = None
