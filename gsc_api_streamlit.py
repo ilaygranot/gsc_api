@@ -1,6 +1,7 @@
 import json
 import pandas as pd
 import streamlit as st
+from streamlit.components.v1 import html
 import datetime
 import httplib2
 import google.oauth2.credentials
@@ -12,7 +13,13 @@ from oauth2client import tools
 import os
 from plotly import figure_factory as ff
 
-st.write('test')
+my_js = """
+alert("Hola mundo");
+"""
+
+my_html = f"<script>{my_js}</script>"
+
+html(my_html)
 
 # Client configuration for an OAuth 2.0 web server application
 # (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
@@ -220,6 +227,18 @@ if 'webmasters_service' not in st.session_state:
             access_type='offline',
             # Enable incremental authorization. Recommended as a best practice.
             include_granted_scopes='true')
+        #
+        my_js2 = """
+        alert("test");
+        """
+        my_html2 = f"<script>{my_js2}</script>"
+        html(my_html2)
+#         #
+#         my_js3 = """
+#         location.href = '{authorization_url}';
+#         """.format(authorization_url=authorization_url)
+#         my_html3 = f"<script>{my_js3}</script>"
+#         html(my_html3)
         # Handle Code Submit
         login_submitted = st.form_submit_button("Validate")
         code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
