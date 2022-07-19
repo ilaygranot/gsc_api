@@ -181,7 +181,7 @@ def convert_df(df):
 
 # Streamlit title
 st.title("Google Search Console 🎃")
-st.warning('Personal Use Only!')
+st.warning('Personal Use Only!!')
 
 # Upload Client Json File
 u_placeholder = st.empty()
