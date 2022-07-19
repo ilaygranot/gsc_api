@@ -202,33 +202,23 @@ st.warning('Personal Use Only!!')
 
 # Show streamlit forms
 webmasters_service = None
-placeholder = st.empty()
 if 'webmasters_service' not in st.session_state:
-    with st.form("login"):
-        # Use the information in the client_secret.json to identify the application requesting authorization.
-        # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-        # Indicate where the API server will redirect the user after the user completes
-        # the authorization flow. The redirect URI is required.
-        flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
-        # Generate URL for request to Google's OAuth 2.0 server.
-        # Use kwargs to set optional request parameters.
-        authorization_url, state = flow.authorization_url(
-            # Enable offline access so that you can refresh an access token without
-            # re-prompting the user for permission. Recommended for web server apps.
-            access_type='offline',
-            # Enable incremental authorization. Recommended as a best practice.
-            include_granted_scopes='true')
-        # Handle Code Submit
-        code_submitted = st.form_submit_button("Login via Google")
-        if code_submitted:
-            my_js = """
-            window.open('{authorization_url}');
-            window.close()
-            """.format(authorization_url=authorization_url)
-            my_html = f"<script>{my_js}</script>"
-            html(my_html)
-        #st.markdown('<a onclick="window.close();" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
+    # Use the information in the client_secret.json to identify the application requesting authorization.
+    # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+    # Indicate where the API server will redirect the user after the user completes
+    # the authorization flow. The redirect URI is required.
+    flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
+    # Generate URL for request to Google's OAuth 2.0 server.
+    # Use kwargs to set optional request parameters.
+    authorization_url, state = flow.authorization_url(
+        # Enable offline access so that you can refresh an access token without
+        # re-prompting the user for permission. Recommended for web server apps.
+        access_type='offline',
+        # Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes='true')
+    # Handle Code Submit
+    st.markdown('<a href="javascript:window.open(\'' + authorization_url + '\');window.close();" target="_blank">Login via Google</a>', unsafe_allow_html=True)
     if 1==0:
         # Send the code to get the credentials
         try:
@@ -245,7 +235,6 @@ if 'webmasters_service' not in st.session_state:
                                     and s['siteUrl'][:4] == 'http']
             if 'verified_sites_urls' not in st.session_state:
                 st.session_state.verified_sites_urls = verified_sites_urls
-                placeholder.empty()
         except:
             st.error('Invalid Verification Code')
             st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
