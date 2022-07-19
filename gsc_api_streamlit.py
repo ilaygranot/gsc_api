@@ -222,8 +222,8 @@ if 'webmasters_service' not in st.session_state:
     google_parms = st.experimental_get_query_params()
     if str(google_parms) != '{}':
         st.write(str(google_parms))
-        st.write(google_parms.code)
-        st.write(google_parms.test)
+        st.write(google_parms['code'])
+        st.write(google_parms['test'])
     if 1==0:
         # Send the code to get the credentials
         try:
