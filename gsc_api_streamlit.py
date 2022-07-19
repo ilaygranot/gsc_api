@@ -229,8 +229,8 @@ if 'webmasters_service' not in st.session_state:
     if has_code:
         # Send the code to get the credentials
         try:
-            credentials = flow.run_console()
-            # credentials = flow.step2_exchange(code)
+            #credentials = flow.run_console()
+            credentials = flow.step2_exchange(code)
             http = credentials.authorize(http=httplib2.Http())
             webmasters_service = build('searchconsole', 'v1', http=http)
             if 'webmasters_service' not in st.session_state:
