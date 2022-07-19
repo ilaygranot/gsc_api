@@ -220,7 +220,7 @@ if 'webmasters_service' not in st.session_state:
         # Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes='true')
     # Handle Code Submit
-    st.markdown('<a href="javascript:window.open(\'' + authorization_url + '\');window.close();">Login via Google</a>', unsafe_allow_html=True)
+    st.markdown('<a href="javascript:window.open(\'' + authorization_url + '\');window.close();" target="_self">Login via Google</a>', unsafe_allow_html=True)
     if 1==0:
         # Send the code to get the credentials
         try:
