@@ -229,8 +229,8 @@ if 'webmasters_service' not in st.session_state:
         # Send the code to get the credentials
         try:
             #credentials = flow.run_console()
-            credentials = flow.fetch_token(code=code)
-            webmasters_service = build('searchconsole', 'v1', credentials=credentials)
+            flow.fetch_token(code=code)
+            webmasters_service = build('searchconsole', 'v1', credentials=flow.credentials)
             if 'webmasters_service' not in st.session_state:
                 st.session_state.webmasters_service = webmasters_service
             # Get Properties
