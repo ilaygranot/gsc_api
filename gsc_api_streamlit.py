@@ -210,7 +210,7 @@ if 'webmasters_service' not in st.session_state:
         flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
         # Indicate where the API server will redirect the user after the user completes
         # the authorization flow. The redirect URI is required.
-        flow.redirect_uri = 'urn:ietf:wg:oauth:2.0:oob'
+        flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
         # Generate URL for request to Google's OAuth 2.0 server.
         # Use kwargs to set optional request parameters.
         authorization_url, state = flow.authorization_url(
@@ -220,9 +220,8 @@ if 'webmasters_service' not in st.session_state:
             # Enable incremental authorization. Recommended as a best practice.
             include_granted_scopes='true')
         # Handle Code Submit
-        login_submitted = st.form_submit_button("Validate")
-        code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
-        if login_submitted:
+        st.markdown('<a syle="text-decoration: unset;" class="css-1q8dd3e edgvbvh5" href="' + authorization_url + '" target="_self">Login via Google</a>', unsafe_allow_html=True)
+        if 1==0:
             # Send the code to get the credentials
             try:
                 credentials = flow.step2_exchange(code)
