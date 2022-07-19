@@ -1,14 +1,31 @@
 import json
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 import datetime
 import httplib2
+import google.oauth2.credentials
+import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
 from oauth2client import client
 from oauth2client import tools
 import os
 from plotly import figure_factory as ff
+
+# Client configuration for an OAuth 2.0 web server application
+# (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
+CLIENT_CONFIG = {'web': {
+    'client_id': st.secrets["google_secrets"]["GOOGLE_CLIENT_ID"],
+    'project_id': st.secrets["google_secrets"]["GOOGLE_PROJECT_ID"],
+    'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
+    'token_uri': 'https://www.googleapis.com/oauth2/v3/token',
+    'auth_provider_x509_cert_url': 'https://www.googleapis.com/oauth2/v1/certs',
+    'client_secret': st.secrets["google_secrets"]["GOOGLE_CLIENT_SECRET"],
+    'redirect_uris': st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"],
+    'javascript_origins': st.secrets["google_secrets"]["GOOGLE_JAVASCRIPT_ORIGINS"]}}
+
+SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
 
 # Make sure we have a temp directory to dump cred files for multiple users:
 if not os.path.exists("tempDir"):
@@ -183,140 +200,123 @@ def convert_df(df):
 st.title("Google Search Console 🎃")
 st.warning('Personal Use Only!!')
 
-# Upload Client Json File
-u_placeholder = st.empty()
-if 'uploaded_file' not in st.session_state or st.session_state.uploaded_file is None:
-    with u_placeholder.form("upload"):
-        uploaded_file = st.file_uploader("📄 Choose an .json file", "json")
-        st.write("Note: The file is deleted after use.")
-        creds_submitted = st.form_submit_button("Upload")
-        if creds_submitted:
-            if uploaded_file is not None:
-                st.session_state.uploaded_file = uploaded_file
-                u_placeholder.empty()
+# Show streamlit forms
+webmasters_service = None
+placeholder = st.empty()
+if 'webmasters_service' not in st.session_state:
+    with placeholder.form("login"):
+        # Use the information in the client_secret.json to identify the application requesting authorization.
+        flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+        # flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+        # Indicate where the API server will redirect the user after the user completes
+        # the authorization flow. The redirect URI is required.
+        flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
+        # Generate URL for request to Google's OAuth 2.0 server.
+        # Use kwargs to set optional request parameters.
+        authorization_url, state = flow.authorization_url(
+            # Enable offline access so that you can refresh an access token without
+            # re-prompting the user for permission. Recommended for web server apps.
+            access_type='offline',
+            # Enable incremental authorization. Recommended as a best practice.
+            include_granted_scopes='true')
+        # Open Google login link:
+        components.iframe(authorization_url)
+        # Handle Code Submit
+        login_submitted = st.form_submit_button("Validate")
+        code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
+        if login_submitted:
+            # Send the code to get the credentials
+            try:
+                credentials = flow.step2_exchange(code)
+                http = credentials.authorize(http=httplib2.Http())
+                webmasters_service = build('searchconsole', 'v1', http=http)
+                if 'webmasters_service' not in st.session_state:
+                    st.session_state.webmasters_service = webmasters_service
+                # Get Properties
+                site_list = webmasters_service.sites().list().execute()
+                # Filter for verified websites
+                verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
+                                    if s['permissionLevel'] != 'siteUnverifiedUser'
+                                        and s['siteUrl'][:4] == 'http']
+                if 'verified_sites_urls' not in st.session_state:
+                    st.session_state.verified_sites_urls = verified_sites_urls
+                placeholder.empty()
+            except:
+                st.error('Invalid Verification Code')
+                st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
+        else:
+            st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
+if 'verified_sites_urls' in st.session_state:
+    # Streamlit Form
+    with st.form("form"):
+        properties = None
+        # Show Properties
+        property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
+        # Number of Rows
+        numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
+        # branded kw 
+        branded_kw = st.text_input('Branded Keyword')
+        # Date: Start Date + End Date
+        st.write('--------------------')
+        st.write('__Default:__ `Last 28 days`')
+        col1, col2 = st.columns(2)
+        with col1:
+            start_date = st.date_input(
+            "Start Date:",
+            datetime.date.today() - datetime.timedelta(28))
+        with col2:
+            end_date = st.date_input(
+            "End Date:",
+            datetime.date.today() - datetime.timedelta(2))
+        # Page
+        st.write('--------------------')
+        col1, col2 = st.columns(2)
+        with col1:
+            page_expression = st.text_input('Page Expression')
+        with col2:
+            page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+        # Query
+        col1, col2 = st.columns(2)
+        with col1:
+            query_expression = st.text_input('Query Expression')
+        with col2:
+            query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+        # Submit button
+        submitted = st.form_submit_button("Submit")
+        if submitted:
+            if 'webmasters_service' not in st.session_state:
+                st.error('Please validate your credentials first!')
             else:
-                st.error("Please select your json credentials file")
-if 'uploaded_file' in st.session_state:
-    # Upload the creds file
-    current_time = str(datetime.datetime.now())
-    current_time = "_".join(current_time.split()).replace(":","-")
-    current_time = current_time[:-7]
-    tmpClientSecret = 'client_secret_' + current_time + '.json'
-    st.session_state.fullTmpClientSecretPath = os.path.join("tempDir", tmpClientSecret)
-    with open(st.session_state.fullTmpClientSecretPath,"wb") as f:
-        f.write(st.session_state.uploaded_file.getbuffer())
-    # Show streamlit forms
-    webmasters_service = None
-    placeholder = st.empty()
-    if 'webmasters_service' not in st.session_state:
-        with placeholder.form("login"):
-            # Get credentials to log in the api
-            SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
-            flow = client.flow_from_clientsecrets(st.session_state.fullTmpClientSecretPath, scope = SCOPES, message = tools.message_if_missing(st.session_state.fullTmpClientSecretPath))
-            # Delete the creds file after usage (cleanup)
-            os.remove(st.session_state.fullTmpClientSecretPath)
-            # Prepare credentials and authorize HTTP
-            auth_uri = flow.step1_get_authorize_url('urn:ietf:wg:oauth:2.0:oob')
-            # Handle Code Submit
-            login_submitted = st.form_submit_button("Validate")
-            code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
-            if login_submitted:
-                # Send the code to get the credentials
-                try:
-                    credentials = flow.step2_exchange(code)
-                    http = credentials.authorize(http=httplib2.Http())
-                    webmasters_service = build('searchconsole', 'v1', http=http)
-                    if 'webmasters_service' not in st.session_state:
-                        st.session_state.webmasters_service = webmasters_service
-                    # Get Properties
-                    site_list = webmasters_service.sites().list().execute()
-                    # Filter for verified websites
-                    verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
-                                        if s['permissionLevel'] != 'siteUnverifiedUser'
-                                            and s['siteUrl'][:4] == 'http']
-                    if 'verified_sites_urls' not in st.session_state:
-                        st.session_state.verified_sites_urls = verified_sites_urls
-                    placeholder.empty()
-                except:
-                    st.error('Invalid Verification Code')
-                    st.success('Go to the following link in your browser and try again:\n'+str(auth_uri))
-            else:
-                st.success('Go to the following link in your browser and try again:\n'+str(auth_uri))
-    if 'verified_sites_urls' in st.session_state:
-        # Streamlit Form
-        with st.form("form"):
-            properties = None
-            # Show Properties
-            property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
-            # Number of Rows
-            numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
-            # branded kw 
-            branded_kw = st.text_input('Branded Keyword')
-            # Date: Start Date + End Date
-            st.write('--------------------')
-            st.write('__Default:__ `Last 28 days`')
-            col1, col2 = st.columns(2)
-            with col1:
-                start_date = st.date_input(
-                "Start Date:",
-                datetime.date.today() - datetime.timedelta(28))
-            with col2:
-                end_date = st.date_input(
-                "End Date:",
-                datetime.date.today() - datetime.timedelta(2))
-            # Page
-            st.write('--------------------')
-            col1, col2 = st.columns(2)
-            with col1:
-                page_expression = st.text_input('Page Expression')
-            with col2:
-                page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-            # Query
-            col1, col2 = st.columns(2)
-            with col1:
-                query_expression = st.text_input('Query Expression')
-            with col2:
-                query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-            # Submit button
-            submitted = st.form_submit_button("Submit")
-            if submitted:
-                if 'uploaded_file' not in st.session_state:
-                    st.error('Please select a file first!')
-                elif 'webmasters_service' not in st.session_state:
-                    st.error('Please validate your credentials first!')
-                else:
-                    # Validate Inputs
-                    if page_expression == '':
-                        page_operator = 'None'
-                    if query_operator == '':
-                        query_operator = 'None'
-                    # Debug
-                    # st.write('Property: ', property)
-                    # st.write('Start Date: ', start_date)
-                    # st.write('End Date: ', end_date)
-                    # st.write('Page Expression: ', page_expression)
-                    # st.write('Page Operator: ', page_operator)
-                    # st.write('Query Expression: ', query_expression)
-                    # st.write('Query Operator: ', query_operator)
-                    # st.write("CSV:", csv_file)
-                    # Scan website using google:
-                    csv_file = scan_website(st.session_state.webmasters_service, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-                    # Delete the creds file after usage (cleanup)
-                    os.remove(st.session_state.fullTmpClientSecretPath)
-                    # Generate CSV
-                    csv_file_data = pd.read_csv(csv_file)
-                    # Add Branded Column
-                    csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
-                    # If branded_kw is empty then drop branded column
-                    if branded_kw == '':
-                        csv_file_data = csv_file_data.drop(columns=['Branded'])
-                    # Preview CSV
-                    st.write("Preview:")
-                    st.dataframe(csv_file_data)
-                    st.success("Successfully found " + str(len(csv_file_data)) + " records.")
-                    # Convert CSV to DF
-                    csv = convert_df(csv_file_data)
-                    can_download = True
+                # Validate Inputs
+                if page_expression == '':
+                    page_operator = 'None'
+                if query_operator == '':
+                    query_operator = 'None'
+                # Debug
+                # st.write('Property: ', property)
+                # st.write('Start Date: ', start_date)
+                # st.write('End Date: ', end_date)
+                # st.write('Page Expression: ', page_expression)
+                # st.write('Page Operator: ', page_operator)
+                # st.write('Query Expression: ', query_expression)
+                # st.write('Query Operator: ', query_operator)
+                # st.write("CSV:", csv_file)
+                # Scan website using google:
+                csv_file = scan_website(st.session_state.webmasters_service, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+                # Generate CSV
+                csv_file_data = pd.read_csv(csv_file)
+                # Add Branded Column
+                csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
+                # If branded_kw is empty then drop branded column
+                if branded_kw == '':
+                    csv_file_data = csv_file_data.drop(columns=['Branded'])
+                # Preview CSV
+                st.write("Preview:")
+                st.dataframe(csv_file_data)
+                st.success("Successfully found " + str(len(csv_file_data)) + " records.")
+                # Convert CSV to DF
+                csv = convert_df(csv_file_data)
+                can_download = True
 
 # Show CSV Download Button
 if can_download and csv is not None:
