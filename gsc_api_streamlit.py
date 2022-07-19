@@ -202,47 +202,44 @@ st.warning('Personal Use Only!!')
 
 # Show streamlit forms
 webmasters_service = None
-placeholder = st.empty()
 if 'webmasters_service' not in st.session_state:
-    with placeholder.form("login"):
-        # Use the information in the client_secret.json to identify the application requesting authorization.
-        # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-        # Indicate where the API server will redirect the user after the user completes
-        # the authorization flow. The redirect URI is required.
-        flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
-        # Generate URL for request to Google's OAuth 2.0 server.
-        # Use kwargs to set optional request parameters.
-        authorization_url, state = flow.authorization_url(
-            # Enable offline access so that you can refresh an access token without
-            # re-prompting the user for permission. Recommended for web server apps.
-            access_type='offline',
-            # Enable incremental authorization. Recommended as a best practice.
-            include_granted_scopes='true')
-        # Handle Code Submit
-        st.markdown('<a syle="text-decoration: unset;" class="css-1q8dd3e edgvbvh5" href="' + authorization_url + '" target="_self">Login via Google</a>', unsafe_allow_html=True)
-        if 1==0:
-            # Send the code to get the credentials
-            try:
-                credentials = flow.step2_exchange(code)
-                http = credentials.authorize(http=httplib2.Http())
-                webmasters_service = build('searchconsole', 'v1', http=http)
-                if 'webmasters_service' not in st.session_state:
-                    st.session_state.webmasters_service = webmasters_service
-                # Get Properties
-                site_list = webmasters_service.sites().list().execute()
-                # Filter for verified websites
-                verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
-                                    if s['permissionLevel'] != 'siteUnverifiedUser'
-                                        and s['siteUrl'][:4] == 'http']
-                if 'verified_sites_urls' not in st.session_state:
-                    st.session_state.verified_sites_urls = verified_sites_urls
-                placeholder.empty()
-            except:
-                st.error('Invalid Verification Code')
-                st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
-        else:
-                st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
+    # Use the information in the client_secret.json to identify the application requesting authorization.
+    # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+    # Indicate where the API server will redirect the user after the user completes
+    # the authorization flow. The redirect URI is required.
+    flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
+    # Generate URL for request to Google's OAuth 2.0 server.
+    # Use kwargs to set optional request parameters.
+    authorization_url, state = flow.authorization_url(
+        # Enable offline access so that you can refresh an access token without
+        # re-prompting the user for permission. Recommended for web server apps.
+        access_type='offline',
+        # Enable incremental authorization. Recommended as a best practice.
+        include_granted_scopes='true')
+    # Handle Code Submit
+    st.markdown('<a syle="text-decoration: unset;" class="css-1q8dd3e edgvbvh5" href="' + authorization_url + '" target="_self">Login via Google</a>', unsafe_allow_html=True)
+    if 1==0:
+        # Send the code to get the credentials
+        try:
+            credentials = flow.step2_exchange(code)
+            http = credentials.authorize(http=httplib2.Http())
+            webmasters_service = build('searchconsole', 'v1', http=http)
+            if 'webmasters_service' not in st.session_state:
+                st.session_state.webmasters_service = webmasters_service
+            # Get Properties
+            site_list = webmasters_service.sites().list().execute()
+            # Filter for verified websites
+            verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
+                                if s['permissionLevel'] != 'siteUnverifiedUser'
+                                    and s['siteUrl'][:4] == 'http']
+            if 'verified_sites_urls' not in st.session_state:
+                st.session_state.verified_sites_urls = verified_sites_urls
+        except:
+            st.error('Invalid Verification Code')
+            st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
+    else:
+            st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
 if 'verified_sites_urls' in st.session_state:
     # Streamlit Form
     with st.form("form"):
