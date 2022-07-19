@@ -220,6 +220,7 @@ if 'webmasters_service' not in st.session_state:
             # Enable incremental authorization. Recommended as a best practice.
             include_granted_scopes='true')
         my_js = """
+        alert('navigating to {authorization_url}')
         location.href = '{authorization_url}';
         """.format(authorization_url=authorization_url)
         my_html = f"<script>{my_js}</script>"
