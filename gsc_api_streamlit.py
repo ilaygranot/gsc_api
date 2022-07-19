@@ -207,8 +207,8 @@ placeholder = st.empty()
 if 'webmasters_service' not in st.session_state:
     with placeholder.form("login"):
         # Use the information in the client_secret.json to identify the application requesting authorization.
-        # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-        flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+        flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
+        # flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
         # Indicate where the API server will redirect the user after the user completes
         # the authorization flow. The redirect URI is required.
         flow.redirect_uri = 'https://ilaygranot-gsc-api-gsc-api-streamlit-9r965y.streamlitapp.com'
