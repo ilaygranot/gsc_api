@@ -1,7 +1,6 @@
 import json
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 import datetime
 import httplib2
 import google.oauth2.credentials
@@ -221,8 +220,6 @@ if 'webmasters_service' not in st.session_state:
             access_type='offline',
             # Enable incremental authorization. Recommended as a best practice.
             include_granted_scopes='true')
-        # Open Google login link:
-        components.iframe(authorization_url)
         # Handle Code Submit
         login_submitted = st.form_submit_button("Validate")
         code = st.text_input('Enter Verification Code and Submit Again:') # Wait for verification code
