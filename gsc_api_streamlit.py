@@ -3,7 +3,6 @@ import pandas as pd
 import streamlit as st
 from streamlit.components.v1 import html
 import datetime
-import httplib2
 import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
@@ -230,9 +229,8 @@ if 'webmasters_service' not in st.session_state:
         # Send the code to get the credentials
         try:
             #credentials = flow.run_console()
-            credentials = flow.step2_exchange(code)
-            http = credentials.authorize(http=httplib2.Http())
-            webmasters_service = build('searchconsole', 'v1', http=http)
+            credentials = flow.fetch_token(code=code)
+            webmasters_service = build('searchconsole', 'v1', credentials=credentials)
             if 'webmasters_service' not in st.session_state:
                 st.session_state.webmasters_service = webmasters_service
             # Get Properties
