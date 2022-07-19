@@ -218,7 +218,7 @@ if 'webmasters_service' not in st.session_state:
         # Enable incremental authorization. Recommended as a best practice.
         include_granted_scopes='true')
     # Handle Code Submit
-    st.markdown('<a syle="text-decoration: unset;" class="css-1q8dd3e edgvbvh5" href="' + authorization_url + '" target="_self">Login via Google</a>', unsafe_allow_html=True)
+    st.markdown('<a onclick="window.close();" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
     if 1==0:
         # Send the code to get the credentials
         try:
@@ -237,8 +237,6 @@ if 'webmasters_service' not in st.session_state:
                 st.session_state.verified_sites_urls = verified_sites_urls
         except:
             st.error('Invalid Verification Code')
-            st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
-    else:
             st.success('Go to the following link in your browser and try again:\n'+str(authorization_url))
 if 'verified_sites_urls' in st.session_state:
     # Streamlit Form
