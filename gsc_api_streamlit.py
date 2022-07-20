@@ -307,6 +307,8 @@ if 'verified_sites_urls' in st.session_state:
                 # If branded_kw is empty then drop branded column
                 if branded_kw == '':
                     csv_file_data = csv_file_data.drop(columns=['Branded'])
+                # create line chart with streamlit apply on clicks, impressions, CTR base on time period
+                st.line_chart(csv_file_data)    
                 # Preview CSV
                 st.write("Preview:")
                 st.dataframe(csv_file_data)
