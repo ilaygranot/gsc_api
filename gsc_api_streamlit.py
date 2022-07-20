@@ -302,6 +302,7 @@ if 'verified_sites_urls' in st.session_state:
                 csv_file = scan_website(st.session_state.webmasters_service, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
                 # Generate CSV
                 csv_file_data = pd.read_csv(csv_file)
+                st.line_chart('clicks','imperssions','ctr')
                 # Add Branded Column
                 csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
                 # If branded_kw is empty then drop branded column
