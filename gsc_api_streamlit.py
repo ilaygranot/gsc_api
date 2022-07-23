@@ -41,7 +41,7 @@ def dt_to_str(date, fmt='%Y-%m-%d'):
 
 # Parse request data
 def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, scDict, page_operator, page_expression, query_operator, query_expression, output):
-    # Extract this information from GSC
+    # Extract data from GSC API
     request = {}
     if (page_operator != 'None' or query_operator != 'None'):
         if (page_operator != 'None' and query_operator != 'None'):
@@ -66,7 +66,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
                     }
                 ],
                 'rowLimit': rowLimit,                    # Set number of rows to extract at once (min 1 , max 25k)
-                'startRow': startRow                           # Start at row 0
+                'startRow': startRow                     # Start at row 0
             }
         elif(page_operator != 'None'):
             request = {
@@ -85,13 +85,13 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
                     }
                 ],
                 'rowLimit': rowLimit,                    # Set number of rows to extract at once (min 1 , max 25k)
-                'startRow': startRow                           # Start at row 0
+                'startRow': startRow                     # Start at row 0
             }
         elif(query_operator != 'None'):
             request = {
-                'startDate': dt_to_str(start_date),     # Get today's date (while loop)
-                'endDate': dt_to_str(end_date),         # Get today's date (while loop)
-                'dimensions': ['date','page','query'],  # Extract This information
+                'startDate': dt_to_str(start_date),      # Get today's date (while loop)
+                'endDate': dt_to_str(end_date),          # Get today's date (while loop)
+                'dimensions': ['date','page','query'],   # Extract This information
                 'dimensionFilterGroups': [
                     {
                     "filters": [
@@ -104,17 +104,18 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
                     }
                 ],
                 'rowLimit': rowLimit,                    # Set number of rows to extract at once (min 1 , max 25k)
-                'startRow': startRow                           # Start at row 0
+                'startRow': startRow                     # Start at row 0
             }
     else:
         request = {
-            'startDate': dt_to_str(start_date),     # Get today's date (while loop)
-            'endDate': dt_to_str(end_date),         # Get today's date (while loop)
-            'dimensions': ['date','page','query'],  # Extract This information
-            'rowLimit': rowLimit,                    # Set number of rows to extract at once (min 1 , max 25k)
-            'startRow': startRow                           # Start at row 0
+            'startDate': dt_to_str(start_date),          # Get today's date (while loop)
+            'endDate': dt_to_str(end_date),              # Get today's date (while loop)
+            'dimensions': ['date','page','query'],       # Extract This information
+            'rowLimit': rowLimit,                        # Set number of rows to extract at once (min 1 , max 25k)
+            'startRow': startRow                         # Start at row 0
         }
     response = webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
+    
     # Check for row limit
     if (len(response['rows']) == 0):
         #st.write("Reached the end, No more data from the api to save..") #DEBUG
@@ -137,7 +138,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
     df['clicks'] = df['clicks'].astype('int')
     df['ctr'] = df['ctr'] * 100
     df['impressions'] = df['impressions'].astype('int')
-    df['position'] = df['position'].round(2)#df.sort_values('clicks',ascending=False)
+    df['position'] = df['position'].round(2) #df.sort_values('clicks',ascending=False)
     # Preview Data (DEBUG)
     # st.dataframe(df)
     # Write this chunk of page to the CSV
@@ -148,7 +149,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
     # st.write('chunk written to CSV', output, 'inserted rows:', len(response['rows'])) #DEBUG
     return len(response['rows'])
 
-# Connect the web interface to Google
+# Apply the function on the streamlit UI
 def scan_website(webmasters_service, my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression):
     current_time = str(datetime.datetime.now())
     current_time = "_".join(current_time.split()).replace(":","-")
@@ -172,7 +173,7 @@ def scan_website(webmasters_service, my_property, max_rows, start_date, end_date
                 if (request_count != overall_limit):
                     # st.write("Finished writing to CSV file: Not enough results (%i != %i)" % (request_count, overall_limit)) #DEBUG
                     break
-                else: # We got 25k results, ask for more
+                else: 
                     startRow += overall_limit
                     rowLimit -= overall_limit
                     # st.write("We got 25k results! Scanning the next page..") #DEBUG
@@ -187,16 +188,16 @@ def scan_website(webmasters_service, my_property, max_rows, start_date, end_date
         parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, scDict, page_operator, page_expression, query_operator, query_expression, output)
     return output
 
-# Convert DF's to CSV's somehow
+# Convert DF's to CSV
 @st.cache
 def convert_df(df):
     # IMPORTANT: Cache the conversion to prevent computation on every rerun
     return df.to_csv().encode('utf-8')
 
 # Streamlit title
-st.title("Google Search Console 🎃")
+st.title("Google Search Console API Explorer")
 
-# Show streamlit forms
+# Build streamlit form
 webmasters_service = None
 if 'webmasters_service' not in st.session_state:
     # Use the information in the client_secret.json to identify the application requesting authorization.
