@@ -40,7 +40,7 @@ def dt_to_str(date, fmt='%Y-%m-%d'):
     return date.strftime(fmt)
 
 # Send a request and parse it's data:
-def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
+def parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
     # Initialize empty dictionary to store data
     data = defaultdict(list)
     # Set request parameters
@@ -50,21 +50,38 @@ def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_op
     request['dimensions'] = ['date','page','query'] # Extract This information
     request['rowLimit'] = rowLimit # Set number of rows to extract at once (min 1 , max 25k)
     request['startRow'] = startRow # Start at row 0
-    # Optionally add page/query operators to the request, depending what the user has selected in the interface
-    if (page_operator != 'None') or query_operator != 'None':
+    request['type'] = type_selectbox # Filter results to the following type
+    # Optionally add page/query/countries/devices operators to the request, depending what the user has selected in the interface
+    if page_operator != 'None' or query_operator != 'None' or country_operator != 'None' or device_operator != 'None':
         request['dimensionFilterGroups'] = [{ 'filters': [] }]
-    if (page_operator != 'None'):
+    if page_operator != 'None':
         request['dimensionFilterGroups'][0]['filters'].append({
-                    "dimension": "page",
+                    "dimension": "PAGE",
                     "operator": page_operator,
                     "expression": page_expression
                     })
     if query_operator != 'None':
         request['dimensionFilterGroups'][0]['filters'].append({
-                    "dimension": "query",
+                    "dimension": "QUERY",
                     "operator": query_operator,
                     "expression": query_expression
                     })
+    if country_operator != 'None':
+        request['dimensions'].append('country')
+        for country in selected_countries:
+            request['dimensionFilterGroups'][0]['filters'].append({
+                        "dimension": "COUNTRY",
+                        "operator": country_operator,
+                        "expression": country
+                        })
+    if device_operator != 'None':
+        request['dimensions'].append('device')
+        for device in selected_devices:
+            request['dimensionFilterGroups'][0]['filters'].append({
+                        "dimension": "DEVICE",
+                        "operator": device_operator,
+                        "expression": device
+                        })
     # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
     # Check for row limit
@@ -91,7 +108,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_op
     return len(response['rows']), df
 
 # Apply the function on the streamlit UI:
-def scan_website(my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
+def scan_website(my_property, max_rows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
     rowLimit = int(max_rows)
     frames = []
     final_df = pd.DataFrame() # Initialize empty dataframe incase more than 25k rows are requested.
@@ -101,7 +118,7 @@ def scan_website(my_property, max_rows, start_date, end_date, page_operator, pag
         tmp_rowLimit = API_LIMIT # st.write("Requesting %i rows above overall limit.." % rowLimit) #DEBUG
         # Loop through multiple requests, 25k each.
         while (True):
-            request_count, df = parse_request(start_date, end_date, tmp_rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
+            request_count, df = parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, tmp_rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
             frames.append(df)
             if (request_count == 0): # st.write("Finished writing to CSV file: No more results") #DEBUG
                 break
@@ -118,7 +135,7 @@ def scan_website(my_property, max_rows, start_date, end_date, page_operator, pag
         # Combine all data frames into a single dataframe
         final_df = pd.concat(frames)
     else: # st.write("Requesting %i rows.." % rowLimit) #DEBUG
-        request_count, final_df = parse_request(start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
+        request_count, final_df = parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
     return final_df # Either provide a single data frame or provides multiple data frames
 
 ## 4. Streamlit Interface: -------------------------------------------
@@ -176,6 +193,36 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
         # Show Branded Keyword Field:
         branded_kw = st.text_input('Branded Keyword')
+        # Show Country Dropdown Field:
+        st.write('--------------------')
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_countries = st.multiselect(
+                'Choose Country',
+                ['qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'isr', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'usa', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'gbr', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png'],
+                ['usa', 'gbr'])
+        with col2:
+            country_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
+        # Show Device Dropdown Field:
+        st.write('--------------------')
+        col1, col2 = st.columns(2)
+        with col1:
+            selected_devices = st.multiselect(
+                'Choose Device',
+                ['DESKTOP','MOBILE','TABLET'],
+                ['DESKTOP'])
+        with col2:
+            device_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
+        # Filter results to the following type::
+        st.write('--------------------')
+        st.write('Filter results to the following type:')
+        type_selectbox = st.selectbox('Type', ('discover', 'googleNews', 'news', 'image', 'video', 'web'), 5)
+        st.write('"discover": Discover results')
+        st.write('"googleNews": Results from news.google.com and the Google News app on Android and iOS. Doesn\'t include results from the "News" tab in Google Search.')
+        st.write('"news": Search results from the "News" tab in Google Search.')
+        st.write('"image": Search results from the "Image" tab in Google Search.')
+        st.write('"video": Video search results')
+        st.write('"web": [Default] Filter results to the combined ("All") tab in Google Search. Does not include Discover or Google News results.')
         # Show Start Date + End Date Fields:
         st.write('--------------------')
         st.write('__Default:__ `Last 28 days`')
@@ -208,10 +255,14 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
             # Validate Inputs:
             if page_expression == '':
                 page_operator = 'None'
-            if query_operator == '':
+            if query_expression == '':
                 query_operator = 'None'
+            if selected_countries == '':
+                country_operator = 'None'
+            if selected_devices == '':
+                device_operator = 'None'
             # Scan website using Google:
-            final_df = scan_website(property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+            final_df = scan_website(property, numberOfRows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
             # Optionally add the Branded Column if the user has provided a branded keyword:
             if branded_kw != '': # If branded_kw is empty then drop branded column
                 final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
