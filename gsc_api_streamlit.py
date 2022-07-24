@@ -212,7 +212,7 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
                 ['DESKTOP','MOBILE','TABLET'],
                 ['DESKTOP'])
         with col2:
-            device_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
+            device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
         # Filter results to the following type::
         st.write('--------------------')
         st.write('Filter results to the following type:')
