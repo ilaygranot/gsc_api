@@ -1,18 +1,17 @@
-import json
-import pandas as pd
+import pandas as pd # from plotly import figure_factory as ff
 import streamlit as st
-from streamlit.components.v1 import html
 import datetime
-import google.oauth2.credentials
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
-import os
-from plotly import figure_factory as ff
 
-# Client configuration for an OAuth 2.0 web server application
-# (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
-CLIENT_CONFIG = {'web': {
+# Global Variables:
+can_download = False # Handle Download Button State
+csv = None
+webmasters_service = None
+overall_limit = 25000
+SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
+CLIENT_CONFIG = {'web': { # Client configuration for an OAuth 2.0 web server application (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
     'client_id': st.secrets["google_secrets"]["GOOGLE_CLIENT_ID"],
     'project_id': st.secrets["google_secrets"]["GOOGLE_PROJECT_ID"],
     'auth_uri': 'https://accounts.google.com/o/oauth2/auth',
@@ -21,28 +20,23 @@ CLIENT_CONFIG = {'web': {
     'client_secret': st.secrets["google_secrets"]["GOOGLE_CLIENT_SECRET"],
     'redirect_uris': st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"],
     'javascript_origins': st.secrets["google_secrets"]["GOOGLE_JAVASCRIPT_ORIGINS"]}}
-
-SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
-
-# Make sure we have a temp directory to dump cred files for multiple users:
-if not os.path.exists("tempDir"):
-    os.makedirs("tempDir")
-
-# Global Variables:
-can_download = False # Handle Download Button State
-csv = None
  
-# Convert datetime to string
+# Converts a datetime object to a string.
 def dt_to_str(date, fmt='%Y-%m-%d'):
-    """
-    Converts a datetime object to a string.
-    """
     return date.strftime(fmt)
 
-# Parse request data
-def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, scDict, page_operator, page_expression, query_operator, query_expression, output):
+# Convert DF's to CSV
+@st.cache # IMPORTANT: Cache the conversion to prevent computation on every rerun
+def convert_df(df):
+    return df.to_csv().encode('utf-8')
+
+# Send a request and parse it's data
+def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, page_operator, page_expression, query_operator, query_expression):
+    # initialize empty Dict to store data
+    data = defaultdict(list)
     # Extract data from GSC API
     request = {}
+    # Set request parameters
     if (page_operator != 'None' or query_operator != 'None'):
         if (page_operator != 'None' and query_operator != 'None'):
             request = {
@@ -115,7 +109,6 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
             'startRow': startRow                         # Start at row 0
         }
     response = webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
-    
     # Check for row limit
     if (len(response['rows']) == 0):
         #st.write("Reached the end, No more data from the api to save..") #DEBUG
@@ -123,83 +116,58 @@ def parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, 
     #Process the response
     try:
         for row in response['rows']:
-            scDict['date'].append(row['keys'][0] or 0)    
-            scDict['page'].append(row['keys'][1] or 0)
-            scDict['query'].append(row['keys'][2] or 0)
-            scDict['clicks'].append(row['clicks'] or 0)
-            scDict['ctr'].append(row['ctr'] or 0)
-            scDict['impressions'].append(row['impressions'] or 0)
-            scDict['position'].append(row['position'] or 0)
+            data['date'].append(row['keys'][0] or 0)    
+            data['page'].append(row['keys'][1] or 0)
+            data['query'].append(row['keys'][2] or 0)
+            data['clicks'].append(row['clicks'] or 0)
+            data['ctr'].append(row['ctr'] or 0)
+            data['impressions'].append(row['impressions'] or 0)
+            data['position'].append(row['position'] or 0)
         #st.write('Added %i to the CSV file.' % len(response['rows'])) #DEBUG
     except:
         st.error('error occurred at %i' % rowLimit)
     # Add response to dataframe 
-    df = pd.DataFrame(data = scDict)
+    df = pd.DataFrame(data)
     df['clicks'] = df['clicks'].astype('int')
     df['ctr'] = df['ctr'] * 100
     df['impressions'] = df['impressions'].astype('int')
-    df['position'] = df['position'].round(2) #df.sort_values('clicks',ascending=False)
-    # Preview Data (DEBUG)
-    # st.dataframe(df)
-    # Write this chunk of page to the CSV
-    if not os.path.isfile(output):
-        df.to_csv(output)
-    else:
-        df.to_csv(output, mode='a', header=False)
-    # st.write('chunk written to CSV', output, 'inserted rows:', len(response['rows'])) #DEBUG
-    return len(response['rows'])
+    df['position'] = df['position'].round(2)
+    return len(response['rows']), df
 
 # Apply the function on the streamlit UI
-def scan_website(webmasters_service, my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression):
-    current_time = str(datetime.datetime.now())
-    current_time = "_".join(current_time.split()).replace(":","-")
-    current_time = current_time[:-7]
+def scan_website(webmasters_service, my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
     rowLimit = int(max_rows)
-    output = os.path.join("tempDir", 'gsc_api_' + current_time + '.csv')
-    # Create function to extract all the data
-    scDict = defaultdict(list)                      # initialize empty Dict to store data
-    overall_limit = 25000
+    frames = []
+    final_df = pd.DataFrame() # Initialize empty dataframe incase more than 25k rows are requested.
     startRow = 0
     tmp_rowLimit = 0
-    if (rowLimit > overall_limit): # 52000 # 50000
-        # st.write("Requesting %i rows above overall limit.." % rowLimit) #DEBUG
-        tmp_rowLimit = overall_limit
+    if (rowLimit > overall_limit): # Check if the number of rows entered in the streamlit interface is bigger than the overall limit of the google search console api (per page, 25000)
+        tmp_rowLimit = overall_limit # st.write("Requesting %i rows above overall limit.." % rowLimit) #DEBUG
+        # Loop through multiple requests, 25k each.
         while (True):
-            request_count = parse_request(start_date, end_date, tmp_rowLimit, startRow, webmasters_service, my_property, scDict, page_operator, page_expression, query_operator, query_expression, output)
-            if (request_count == 0):
-                # st.write("Finished writing to CSV file: No more results") #DEBUG
+            request_count, df = parse_request(start_date, end_date, tmp_rowLimit, startRow, webmasters_service, my_property, page_operator, page_expression, query_operator, query_expression)
+            frames.append(df)
+            if (request_count == 0): # st.write("Finished writing to CSV file: No more results") #DEBUG
                 break
             else:
-                if (request_count != overall_limit):
-                    # st.write("Finished writing to CSV file: Not enough results (%i != %i)" % (request_count, overall_limit)) #DEBUG
+                if (request_count != overall_limit): # st.write("Finished writing to CSV file: Not enough results (%i != %i)" % (request_count, overall_limit)) #DEBUG
                     break
                 else: 
                     startRow += overall_limit
-                    rowLimit -= overall_limit
-                    # st.write("We got 25k results! Scanning the next page..") #DEBUG
-                    if (rowLimit == 0):
-                        # st.write("Finished writing to CSV file: Exactly enough results") #DEBUG
+                    rowLimit -= overall_limit # st.write("We got 25k results! Scanning the next page..") #DEBUG
+                    if (rowLimit == 0): # st.write("Finished writing to CSV file: Exactly enough results") #DEBUG
                         break
-                    if (rowLimit < overall_limit):
-                        # st.write("We only want %i more results, Scanning the next page with excatly that amount.." % rowLimit) #DEBUG
-                        tmp_rowLimit = rowLimit 
-    else:
-        # st.write("Requesting %i rows.." % rowLimit) #DEBUG
-        parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, scDict, page_operator, page_expression, query_operator, query_expression, output)
-    return output
+                    if (rowLimit < overall_limit): # st.write("We only want %i more results, Scanning the next page with exactly that amount.." % rowLimit) #DEBUG
+                        tmp_rowLimit = rowLimit
+        # Combine all data frames into a single dataframe
+        final_df = pd.concat(frames)
+    else: # st.write("Requesting %i rows.." % rowLimit) #DEBUG
+        request_count, final_df = parse_request(start_date, end_date, rowLimit, startRow, webmasters_service, my_property, page_operator, page_expression, query_operator, query_expression)
+    return final_df # Either provide a single data frame or provides multiple data frames
 
-# Convert DF's to CSV
-@st.cache
-def convert_df(df):
-    # IMPORTANT: Cache the conversion to prevent computation on every rerun
-    return df.to_csv().encode('utf-8')
-
-# Streamlit title
-st.title("Google Search Console API Explorer")
-
-# Build streamlit form
-webmasters_service = None
-if 'webmasters_service' not in st.session_state:
+# Streamlit interface (Notes: Globally declared variables)
+st.title("Google Search Console API Explorer") # Streamlit title
+if 'webmasters_service' not in st.session_state: # Login Form
     # Use the information in the client_secret.json to identify the application requesting authorization.
     # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
     flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
@@ -243,8 +211,13 @@ if 'webmasters_service' not in st.session_state:
         except Exception as e:
             st.error('Invalid Verification Code:\n'+str(e))
     else:
-        st.markdown('<a style="background-color:#4CAF50;border:none;color:white;padding:15px 32px;text-align:center;text-decoration:none;display:inline-block;font-size:16px;" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
-if 'verified_sites_urls' in st.session_state:
+        with st.form("login_form"):
+            login_btn = st.form_submit_button("Submit")
+            if login_btn:
+                html_string = "<img src=\"\" onerror=\"alert('hey')\">"
+                st.markdown(html_string, unsafe_allow_html=True)
+        #st.markdown('<a style="' + button_style + '" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
+if 'verified_sites_urls' in st.session_state: # GSC Form
     # Streamlit Form
     with st.form("form"):
         properties = None
@@ -303,11 +276,8 @@ if 'verified_sites_urls' in st.session_state:
                 csv_file = scan_website(st.session_state.webmasters_service, property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
                 # Generate CSV
                 csv_file_data = pd.read_csv(csv_file)
-                # Add Branded Column
-                csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw)
-                # If branded_kw is empty then drop branded column
-                if branded_kw == '':
-                    csv_file_data = csv_file_data.drop(columns=['Branded'])
+                if branded_kw != '': # If branded_kw is empty then drop branded column
+                    csv_file_data['Branded'] = csv_file_data['query'].str.contains(branded_kw) # Add Branded Column
                 # Preview CSV
                 st.write("Preview:")
                 st.dataframe(csv_file_data)
@@ -315,7 +285,5 @@ if 'verified_sites_urls' in st.session_state:
                 # Convert CSV to DF
                 csv = convert_df(csv_file_data)
                 can_download = True
-
-# Show CSV Download Button
-if can_download and csv is not None:
+if can_download and csv is not None: # Show CSV Download Button
     st.download_button("Download CSV",csv,"file.csv","text/csv",key='download-csv')
