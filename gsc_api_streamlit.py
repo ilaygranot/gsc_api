@@ -75,13 +75,16 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
                         "expression": country
                         })
     if device_operator != 'None':
+        st.write('we have devices')#debug
         request['dimensions'].append('device')
         for device in selected_devices:
+            st.write(device)#debug
             request['dimensionFilterGroups'][0]['filters'].append({
                         "dimension": "DEVICE",
                         "operator": device_operator,
                         "expression": device
                         })
+    st.write(request)#debug
     # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
     # Check for row limit
@@ -217,12 +220,6 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         st.write('--------------------')
         st.write('Filter results to the following type:')
         type_selectbox = st.selectbox('Type', ('discover', 'googleNews', 'news', 'image', 'video', 'web'), 5)
-        st.write('"discover": Discover results')
-        st.write('"googleNews": Results from news.google.com and the Google News app on Android and iOS. Doesn\'t include results from the "News" tab in Google Search.')
-        st.write('"news": Search results from the "News" tab in Google Search.')
-        st.write('"image": Search results from the "Image" tab in Google Search.')
-        st.write('"video": Video search results')
-        st.write('"web": [Default] Filter results to the combined ("All") tab in Google Search. Does not include Discover or Google News results.')
         # Show Start Date + End Date Fields:
         st.write('--------------------')
         st.write('__Default:__ `Last 28 days`')
