@@ -230,7 +230,7 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         # Filter results to the following type::
         st.write('--------------------')
         st.write('Filter results to the following type:')
-        type_selectbox = st.selectbox('Type', ('discover', 'googleNews', 'news', 'image', 'video', 'web'), 5)
+        type_selectbox = st.selectbox('Type', ('DISCOVER', 'GOOGLE_NEWS', 'NEWS', 'IMAGE', 'VIDEO', 'WEB'), 5)
         # Show Start Date + End Date Fields:
         st.write('--------------------')
         st.write('__Default:__ `Last 28 days`')
