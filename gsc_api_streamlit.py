@@ -36,29 +36,31 @@ def dt_to_str(date, fmt='%Y-%m-%d'):
 
 # Send a request and parse it's data
 def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
-    # initialize empty Dict to store data
+    # Initialize empty dictionary to store data
     data = defaultdict(list)
-    # Extract data from GSC API
+    # Set request parameters
     request = {}
     request['startDate'] =  dt_to_str(start_date) # Get today's date (while loop)
     request['endDate'] =  dt_to_str(end_date) # Get today's date (while loop)
     request['dimensions'] = ['date','page','query'] # Extract This information
     request['rowLimit'] = rowLimit # Set number of rows to extract at once (min 1 , max 25k)
     request['startRow'] = startRow # Start at row 0
-    # Set request parameters
-    request['dimensionFilterGroups']['filters'] = []
+    # Optionally add page/query operators to the request, depending what the user has selected in the interface
+    if (page_operator != 'None') or query_operator != 'None':
+        request['dimensionFilterGroups'] = [{ 'filters': [] }]
     if (page_operator != 'None'):
-        request['dimensionFilterGroups']['filters'].append({
+        request['dimensionFilterGroups'][0]['filters'].append({
                     "dimension": "page",
                     "operator": page_operator,
                     "expression": page_expression
                     })
     if query_operator != 'None':
-        request['dimensionFilterGroups']['filters'].append({
+        request['dimensionFilterGroups'][0]['filters'].append({
                     "dimension": "query",
                     "operator": query_operator,
                     "expression": query_expression
                     })
+    # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
     # Check for row limit
     if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
