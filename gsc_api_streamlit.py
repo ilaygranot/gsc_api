@@ -47,7 +47,7 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
     request = {}
     request['startDate'] =  dt_to_str(start_date) # Get today's date (while loop)
     request['endDate'] =  dt_to_str(end_date) # Get today's date (while loop)
-    request['dimensions'] = ['date','page','query'] # Extract This information
+    request['dimensions'] = ['DATE','PAGE','QUERY'] # Extract This information
     request['rowLimit'] = rowLimit # Set number of rows to extract at once (min 1 , max 25k)
     request['startRow'] = startRow # Start at row 0
     request['type'] = type_selectbox # Filter results to the following type
@@ -70,7 +70,7 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
                     })
     if country_operator != 'None':
         device_id = 4
-        request['dimensions'].append('country')
+        request['dimensions'].append('COUNTRY')
         for country in selected_countries:
             request['dimensionFilterGroups'][0]['filters'].append({
                         "dimension": "COUNTRY",
@@ -78,7 +78,7 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
                         "expression": country
                         })
     if device_operator != 'None':
-        request['dimensions'].append('device')
+        request['dimensions'].append('DEVICE')
         for device in selected_devices:
             request['dimensionFilterGroups'][0]['filters'].append({
                         "dimension": "DEVICE",
