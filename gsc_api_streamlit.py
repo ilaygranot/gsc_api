@@ -1,3 +1,5 @@
+## 1. Imports: -----------------------------------------------------
+
 import pandas as pd # from plotly import figure_factory as ff
 import streamlit as st
 import datetime
@@ -5,10 +7,10 @@ import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
 
-# Global Variables:
-DOWNLOADABLE = False # Handle Download Button State
+## 2. Global Variables: --------------------------------------------
+
 CSV = None
-API_LIMIT = 25000
+CSV_DOWNLOADABLE = False
 BUTTON_STYLE = """
 background-color:#4CAF50;
 border:none;
@@ -19,6 +21,7 @@ text-decoration:none;
 display:inline-block;
 font-size:16px;
 """
+API_LIMIT = 25000
 SCOPES = ['https://www.googleapis.com/auth/webmasters.readonly'] # Variable parameter that controls the set of resources that the access token permits.
 CLIENT_CONFIG = {'web': { # Client configuration for an OAuth 2.0 web server application (cf. https://developers.google.com/identity/protocols/OAuth2WebServer)
     'client_id': st.secrets["google_secrets"]["GOOGLE_CLIENT_ID"],
@@ -30,11 +33,13 @@ CLIENT_CONFIG = {'web': { # Client configuration for an OAuth 2.0 web server app
     'redirect_uris': st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"],
     'javascript_origins': st.secrets["google_secrets"]["GOOGLE_JAVASCRIPT_ORIGINS"]}}
  
-# Converts a datetime object to a string.
+## 3. Function Declarations: ----------------------------------------
+
+# Converts a datetime object to a string:
 def dt_to_str(date, fmt='%Y-%m-%d'):
     return date.strftime(fmt)
 
-# Send a request and parse it's data
+# Send a request and parse it's data:
 def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
     # Initialize empty dictionary to store data
     data = defaultdict(list)
@@ -74,7 +79,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_op
             data['clicks'].append(row['clicks'] or 0)
             data['ctr'].append(row['ctr'] or 0)
             data['impressions'].append(row['impressions'] or 0)
-            data['position'].append(row['position'] or 0) # st.write('Added %i to the CSV file.' % len(response['rows'])) #DEBUG
+            data['position'].append(row['position'] or 0)
     except:
         st.error('Invalid response from GSC API at row %i' % rowLimit) # Handle errors
     # Add response to dataframe
@@ -85,7 +90,7 @@ def parse_request(start_date, end_date, rowLimit, startRow, my_property, page_op
     df['position'] = df['position'].round(2)
     return len(response['rows']), df
 
-# Apply the function on the streamlit UI
+# Apply the function on the streamlit UI:
 def scan_website(my_property, max_rows, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
     rowLimit = int(max_rows)
     frames = []
@@ -116,67 +121,62 @@ def scan_website(my_property, max_rows, start_date, end_date, page_operator, pag
         request_count, final_df = parse_request(start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
     return final_df # Either provide a single data frame or provides multiple data frames
 
-# Streamlit interface (Notes: Globally declared variables)
-st.title("Google Search Console API Explorer") # Streamlit title
+## 4. Streamlit Interface: -------------------------------------------
 
-# Login Form
+# A. Set Streamlit Page Title:
+st.title("Google Search Console API Explorer")
+
+# B. Show Login Form:
 if 'webmasters_service' not in st.session_state:
-    # Use the information in the client_secret.json to identify the application requesting authorization.
-    # flow = client.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-    flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES)
-    # Indicate where the API server will redirect the user after the user completes
-    # the authorization flow. The redirect URI is required.
-    flow.redirect_uri = st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"]
-    # Generate URL for request to Google's OAuth 2.0 server.
-    # Use kwargs to set optional request parameters.
-    authorization_url, state = flow.authorization_url(
-        # Enable offline access so that you can refresh an access token without
-        # re-prompting the user for permission. Recommended for web server apps.
-        access_type='offline',
-        # Enable incremental authorization. Recommended as a best practice.
-        include_granted_scopes='true')
-    # Handle Code Submit
-    google_parms = st.experimental_get_query_params()
-    has_code = False
+    # Handle Google Login Flow [GET request]:
+    google_parms = st.experimental_get_query_params() # Parse the GET Request Parameters provided by Google via the return_uri
+    token_exists = False
     code = ''
     try:
         code = google_parms['code'][0]
-        has_code = True
-    except:
-        has_code = False
+        token_exists = True
+    except: # Error handling
+        token_exists = False
         pass
-    # Send the code to get the credentials
-    if has_code:
-        try:
-            #credentials = flow.run_console()
+    flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES) # Use the information in the client_secret.json to identify the application requesting authorization.
+    flow.redirect_uri = st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"] # Indicate where the API server will redirect the user after the user completes the authorization flow. The redirect URI is required.
+    # Either show a login button or try to connect into the API and load the user's GSC properties, depending if a 'code' GET parameter was provided or not:
+    if token_exists:
+        try: # try to connect into the API
+            # Validate the provided Google Token Code:
             flow.fetch_token(code=code)
-            if 'webmasters_service' not in st.session_state:
+            # Connect to the API:
+            if 'webmasters_service' not in st.session_state: # store the connection in the session
                 st.session_state.webmasters_service = build('searchconsole', 'v1', credentials=flow.credentials)
-            # Get Properties
+            # Get User Properties Site Addresses:
             site_list = st.session_state.webmasters_service.sites().list().execute()
-            # Filter for verified websites
             verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
                                 if s['permissionLevel'] != 'siteUnverifiedUser'
-                                    and s['siteUrl'][:4] == 'http']
+                                    and s['siteUrl'][:4] == 'http'] # Filter for verified websites
             if 'verified_sites_urls' not in st.session_state:
                 st.session_state.verified_sites_urls = verified_sites_urls
-        except Exception as e:
+        except Exception as e: # Invalidate the session (TODO: Redirect to the home page / remove GET parameters from the URL)
             st.error('Invalid Verification Code:\n'+str(e))
-    else:
+    else: # show a login button
+        # Generate Google Authentication URL:
+        authorization_url, state = flow.authorization_url( # Generate URL for request to Google's OAuth 2.0 server. Use kwargs to set optional request parameters.
+        access_type='offline', # Enable offline access so that you can refresh an access token without re-prompting the user for permission. Recommended for web server apps.
+        include_granted_scopes='true') # Enable incremental authorization. Recommended as a best practice.
+        # Show Google Login Button:
         st.markdown('<a style="' + BUTTON_STYLE + '" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
 
-# GSC Form
-if 'verified_sites_urls' in st.session_state:
-    # Streamlit Form
+# C. Show GSC Streamlit Form when the user is logged in:
+if 'verified_sites_urls' in st.session_state: # Check if we have the user's verified properties list, meaning they are logged in
+    # Streamlit Form:
     with st.form("form"):
         properties = None
-        # Show Properties
+        # Show Properties Dropdown:
         property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
-        # Number of Rows
+        # Show Number of Rows Field:
         numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
-        # branded kw 
+        # Show Branded Keyword Field:
         branded_kw = st.text_input('Branded Keyword')
-        # Date: Start Date + End Date
+        # Show Start Date + End Date Fields:
         st.write('--------------------')
         st.write('__Default:__ `Last 28 days`')
         col1, col2 = st.columns(2)
@@ -188,45 +188,48 @@ if 'verified_sites_urls' in st.session_state:
             end_date = st.date_input(
             "End Date:",
             datetime.date.today() - datetime.timedelta(2))
-        # Page
+        # Show the Page Expression/Operator Fields:
         st.write('--------------------')
         col1, col2 = st.columns(2)
         with col1:
             page_expression = st.text_input('Page Expression')
         with col2:
             page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Query
+        # Show the Query Field:
         col1, col2 = st.columns(2)
         with col1:
             query_expression = st.text_input('Query Expression')
         with col2:
             query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Submit button
+        # Show the Submit button:
         submitted = st.form_submit_button("Submit")
+        # On Submit Clicked:
         if submitted:
-            if 'webmasters_service' not in st.session_state:
-                st.error('Please validate your credentials first!')
-            else:
-                # Validate Inputs
-                if page_expression == '':
-                    page_operator = 'None'
-                if query_operator == '':
-                    query_operator = 'None'
-                # Scan website using google:
-                final_df = scan_website(property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-                if branded_kw != '': # If branded_kw is empty then drop branded column
-                    final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
-                # Preview CSV
-                st.write("Preview:")
-                st.dataframe(final_df)
-                st.success("Successfully found " + str(len(final_df)) + " records.")
-                # Convert DF to CSV and pass it to a global variable, used by the download CSV button
-                CSV = final_df.to_csv().encode('utf-8')
-                DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+            # Validate Inputs:
+            if page_expression == '':
+                page_operator = 'None'
+            if query_operator == '':
+                query_operator = 'None'
+            # Scan website using Google:
+            final_df = scan_website(property, numberOfRows, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+            # Optionally add the Branded Column if the user has provided a branded keyword:
+            if branded_kw != '': # If branded_kw is empty then drop branded column
+                final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
+            # Preview CSV Data:
+            st.write("Preview:")
+            st.dataframe(final_df)
+            st.success("Successfully found " + str(len(final_df)) + " records.")
+            # Convert DF to CSV and pass it to a global variable used by the download CSV button:
+            CSV = final_df.to_csv().encode('utf-8')
+            CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
 
-# Show CSV Download Button
-if DOWNLOADABLE and CSV is not None:
+# D. Show CSV Download Button when CSV data exists:
+if CSV_DOWNLOADABLE and CSV is not None:
+    # Generate a file timestamp:
     current_time = str(datetime.datetime.now())
     current_time = "_".join(current_time.split()).replace(":","-")
     current_time = current_time[:-7]
+    # Show the CSV Button:
     st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
+
+## --------------------------------------------------------------------
