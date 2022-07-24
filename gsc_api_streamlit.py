@@ -229,4 +229,4 @@ if DOWNLOADABLE and CSV is not None:
     current_time = str(datetime.datetime.now())
     current_time = "_".join(current_time.split()).replace(":","-")
     current_time = current_time[:-7]
-    st.download_button("Download CSV", CSV, "GSC_API" + "_" + numberOfRows + "_" + current_time + ".csv", "text/csv", key='download-csv')
+    st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
