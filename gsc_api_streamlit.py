@@ -85,10 +85,10 @@ def parse_request(type_selectbox, selected_country, country_operator, selected_d
                     })
     # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
-    st.write('Request:')#debug
-    st.write(request)#debug
-    st.write('Response:')#debug
-    st.write(response)#debug
+    #st.write('Request:')#debug
+    #st.write(request)#debug
+    #st.write('Response:')#debug
+    #st.write(response)#debug
     # Check for row limit
     try:
         if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
