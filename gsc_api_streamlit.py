@@ -84,6 +84,7 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
                         })
     # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
+    st.write(response)#debug
     # Check for row limit
     if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
         return 0
@@ -217,12 +218,6 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         st.write('--------------------')
         st.write('Filter results to the following type:')
         type_selectbox = st.selectbox('Type', ('discover', 'googleNews', 'news', 'image', 'video', 'web'), 5)
-        st.write('"discover": Discover results')
-        st.write('"googleNews": Results from news.google.com and the Google News app on Android and iOS. Doesn\'t include results from the "News" tab in Google Search.')
-        st.write('"news": Search results from the "News" tab in Google Search.')
-        st.write('"image": Search results from the "Image" tab in Google Search.')
-        st.write('"video": Video search results')
-        st.write('"web": [Default] Filter results to the combined ("All") tab in Google Search. Does not include Discover or Google News results.')
         # Show Start Date + End Date Fields:
         st.write('--------------------')
         st.write('__Default:__ `Last 28 days`')
@@ -253,21 +248,23 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         # On Submit Clicked:
         if submitted:
             # Validate Inputs:
-            st.write('page_expression:')
-            st.write(page_expression)
+            st.write('page_expression:')#debug
+            st.write(page_expression)#debug
             if page_expression == '':
                 page_operator = 'None'
-            st.write('query_expression:')
-            st.write(query_expression)
+            st.write('query_expression:')#debug
+            st.write(query_expression)#debug
             if query_expression == '':
                 query_operator = 'None'
             st.write('selected_countries:')
             st.write(selected_countries)
-            if selected_countries == '':
+            st.write(selected_countries == [])
+            if selected_countries == []:
                 country_operator = 'None'
             st.write('selected_devices:')
             st.write(selected_devices)
-            if selected_devices == '':
+            st.write(selected_devices == [])
+            if selected_devices == []:
                 device_operator = 'None'
             # Scan website using Google:
             final_df = scan_website(property, numberOfRows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
