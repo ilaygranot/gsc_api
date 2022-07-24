@@ -253,12 +253,20 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         # On Submit Clicked:
         if submitted:
             # Validate Inputs:
+            st.write('page_expression:')
+            st.write(page_expression)
             if page_expression == '':
                 page_operator = 'None'
+            st.write('query_expression:')
+            st.write(query_expression)
             if query_expression == '':
                 query_operator = 'None'
+            st.write('selected_countries:')
+            st.write(selected_countries)
             if selected_countries == '':
                 country_operator = 'None'
+            st.write('selected_devices:')
+            st.write(selected_devices)
             if selected_devices == '':
                 device_operator = 'None'
             # Scan website using Google:
