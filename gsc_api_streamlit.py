@@ -86,7 +86,10 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
     st.write(response)#debug
     # Check for row limit
-    if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
+    try:
+        if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
+            return 0
+    except KeyError: # 0 Results found
         return 0
     # Process the response
     try:
