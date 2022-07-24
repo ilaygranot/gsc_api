@@ -40,7 +40,7 @@ def dt_to_str(date, fmt='%Y-%m-%d'):
     return date.strftime(fmt)
 
 # Send a request and parse it's data:
-def parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
+def parse_request(type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression):
     # Initialize empty dictionary to store data
     data = defaultdict(list)
     # Set request parameters
@@ -71,20 +71,18 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
     if country_operator != 'None':
         device_id = 4
         request['dimensions'].append('COUNTRY')
-        for country in selected_countries:
-            request['dimensionFilterGroups'][0]['filters'].append({
-                        "dimension": "COUNTRY",
-                        "operator": country_operator,
-                        "expression": country
-                        })
+        request['dimensionFilterGroups'][0]['filters'].append({
+                    "dimension": "COUNTRY",
+                    "operator": country_operator,
+                    "expression": selected_country
+                    })
     if device_operator != 'None':
         request['dimensions'].append('DEVICE')
-        for device in selected_devices:
-            request['dimensionFilterGroups'][0]['filters'].append({
-                        "dimension": "DEVICE",
-                        "operator": device_operator,
-                        "expression": device
-                        })
+        request['dimensionFilterGroups'][0]['filters'].append({
+                    "dimension": "DEVICE",
+                    "operator": device_operator,
+                    "expression": selected_device
+                    })
     # Send the request to GSC API
     response = st.session_state.webmasters_service.searchanalytics().query(siteUrl=my_property, body=request).execute()
     st.write('Request:')#debug
@@ -122,7 +120,7 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
     return len(response['rows']), df
 
 # Apply the function on the streamlit UI:
-def scan_website(my_property, max_rows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
+def scan_website(my_property, max_rows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression): # Note: Using different variable names to avoid conflicts with streamlit global variables.
     rowLimit = int(max_rows)
     frames = []
     final_df = pd.DataFrame() # Initialize empty dataframe incase more than 25k rows are requested.
@@ -132,7 +130,7 @@ def scan_website(my_property, max_rows, type_selectbox, selected_countries, coun
         tmp_rowLimit = API_LIMIT # st.write("Requesting %i rows above overall limit.." % rowLimit) #DEBUG
         # Loop through multiple requests, 25k each.
         while (True):
-            request_count, df = parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, tmp_rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
+            request_count, df = parse_request(type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, tmp_rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
             frames.append(df)
             if (request_count == 0): # st.write("Finished writing to CSV file: No more results") #DEBUG
                 break
@@ -149,7 +147,7 @@ def scan_website(my_property, max_rows, type_selectbox, selected_countries, coun
         # Combine all data frames into a single dataframe
         final_df = pd.concat(frames)
     else: # st.write("Requesting %i rows.." % rowLimit) #DEBUG
-        request_count, final_df = parse_request(type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
+        request_count, final_df = parse_request(type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, rowLimit, startRow, my_property, page_operator, page_expression, query_operator, query_expression)
     return final_df # Either provide a single data frame or provides multiple data frames
 
 ## 4. Streamlit Interface: -------------------------------------------
@@ -211,20 +209,20 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         st.write('--------------------')
         col1, col2 = st.columns(2)
         with col1:
-            selected_countries = st.multiselect(
+            selected_country = st.selectbox(
                 'Choose Country',
-                ['qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'isr', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'usa', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'gbr', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png'],
-                ['usa', 'gbr'])
+                ['isr', 'usa', 'gbr', 'qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png'],
+                1)
         with col2:
             country_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
         # Show Device Dropdown Field:
         st.write('--------------------')
         col1, col2 = st.columns(2)
         with col1:
-            selected_devices = st.multiselect(
+            selected_device = st.selectbox(
                 'Choose Device',
                 ['DESKTOP','MOBILE','TABLET'],
-                ['DESKTOP'])
+                0)
         with col2:
             device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS'), 0)
         # Filter results to the following type::
@@ -265,12 +263,12 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
                 page_operator = 'None'
             if query_expression == '':
                 query_operator = 'None'
-            if selected_countries == []:
+            if selected_country == []:
                 country_operator = 'None'
-            if selected_devices == []:
+            if selected_device == []:
                 device_operator = 'None'
             # Scan website using Google:
-            final_df = scan_website(property, numberOfRows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+            final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
             if len(final_df) == 0:
                 st.warning("Did not find any records. (" + str(len(final_df)) + ")")
             else:
