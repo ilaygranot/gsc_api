@@ -88,15 +88,16 @@ def parse_request(type_selectbox, selected_countries, country_operator, selected
     # Check for row limit
     try:
         if (len(response['rows']) == 0): # st.write("Reached the end, No more data from the api to save..") #DEBUG
-            return 0
+            return 0, pd.DataFrame()
     except KeyError: # 0 Results found
-        return 0
+        return 0, pd.DataFrame()
     # Process the response
     try:
         for row in response['rows']:
-            data['date'].append(row['keys'][0] or 0)    
+            data['date'].append(row['keys'][0] or 0)
             data['page'].append(row['keys'][1] or 0)
             data['query'].append(row['keys'][2] or 0)
+            data['country'].append(row['keys'][3] or 0)
             data['clicks'].append(row['clicks'] or 0)
             data['ctr'].append(row['ctr'] or 0)
             data['impressions'].append(row['impressions'] or 0)
@@ -261,16 +262,19 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
                 device_operator = 'None'
             # Scan website using Google:
             final_df = scan_website(property, numberOfRows, type_selectbox, selected_countries, country_operator, selected_devices, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-            # Optionally add the Branded Column if the user has provided a branded keyword:
-            if branded_kw != '': # If branded_kw is empty then drop branded column
-                final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
-            # Preview CSV Data:
-            st.write("Preview:")
-            st.dataframe(final_df)
-            st.success("Successfully found " + str(len(final_df)) + " records.")
-            # Convert DF to CSV and pass it to a global variable used by the download CSV button:
-            CSV = final_df.to_csv().encode('utf-8')
-            CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+            if len(final_df) == 0:
+                st.warning("Did not find any records. (" + str(len(final_df)) + ")")
+            else:
+                # Optionally add the Branded Column if the user has provided a branded keyword:
+                if branded_kw != '': # If branded_kw is empty then drop branded column
+                    final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
+                # Preview CSV Data:
+                st.write("Preview:")
+                st.dataframe(final_df)
+                st.success("Successfully found " + str(len(final_df)) + " records.")
+                # Convert DF to CSV and pass it to a global variable used by the download CSV button:
+                CSV = final_df.to_csv().encode('utf-8')
+                CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
 
 # D. Show CSV Download Button when CSV data exists:
 if CSV_DOWNLOADABLE and CSV is not None:
