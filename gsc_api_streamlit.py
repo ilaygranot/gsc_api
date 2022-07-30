@@ -169,7 +169,21 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
-    html_string = '<h3>this is an html string</h3><button onclickk="alert(\'hey\')">popup</button><script>alert(\'hey\')</script>'
+    html_string = """
+        <h3>this is an html string</h3>
+        <button id="mypop">popup</button>
+        <script>
+        function close_window() {
+            var i = document.createElement('iframe');
+            i.style.display = 'none';
+            document.body.appendChild(i);
+            window.console = i.contentWindow.console;
+            console.log('closing window!!!!!!!!!!!!!!!!!!!!!!!!!!!!')
+            window.close();
+        }
+        document.getElementById('mypop').addEventListener('click', close_window);
+        </script>
+        """
     st.markdown(html_string, unsafe_allow_html=True)
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
