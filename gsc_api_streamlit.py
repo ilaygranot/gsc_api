@@ -23,7 +23,7 @@ else:
     layout = "wide" if st.session_state.widen else "centered"
 
 st.set_page_config(
-    layout=layout, page_title="Google Search Console Connector", page_icon="🔌"
+    layout=layout, page_title="Google Search Console Connector", page_icon="https://iconarchive.com/download/i79580/martz90/hex/files.ico"
 )
 
 ## 2. Global Variables: --------------------------------------------
