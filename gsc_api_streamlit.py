@@ -14,12 +14,22 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
+# -----------------------------------------------------
+
+# The code below is for the layout of the page
+if "widen" not in st.session_state:
+    layout = "centered"
+else:
+    layout = "wide" if st.session_state.widen else "centered"
+
+st.set_page_config(
+    layout=layout, page_title="Google Search Console Connector", page_icon="🔌"
+)
 
 ## 2. Global Variables: --------------------------------------------
 
 tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
 CSV = None
-MAIN_DF = pd.DataFrame()
 CSV_DOWNLOADABLE = False
 BUTTON_STYLE = """
 background-color:#4CAF50;
@@ -156,9 +166,9 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 ## 4. Streamlit Interface: -------------------------------------------
 
 # A. Set Streamlit Page Title:
-st.title("Google Search Console API Explorer")
 
 with tab1:
+    st.title("Google Search Console API Explorer")
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
         # Handle Google Login Flow [GET request]:
@@ -266,17 +276,18 @@ with tab1:
                 if selected_device == '':
                     device_operator = 'None'
                 # Scan website using Google:
-                MAIN_DF = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-                if len(MAIN_DF) == 0:
-                    st.warning("Did not find any records. (" + str(len(MAIN_DF)) + ")")
+                final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+                st.session_state.final_df = final_df
+                if len(final_df) == 0:
+                    st.warning("Did not find any records. (" + str(len(final_df)) + ")")
                 else:
                     # Optionally add the Branded Column if the user has provided a branded keyword:
                     if branded_kw != '': # If branded_kw is empty then drop branded column
-                        MAIN_DF['Branded'] = MAIN_DF['query'].str.contains(branded_kw) # Add Branded Column
+                        final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
                     # Preview CSV Data:
-                    st.success("Successfully found " + str(len(MAIN_DF)) + " records.")
+                    st.success("Successfully found " + str(len(final_df)) + " records.")
                     # Convert DF to CSV and pass it to a global variable used by the download CSV button:
-                    CSV = MAIN_DF.to_csv().encode('utf-8')
+                    CSV = final_df.to_csv().encode('utf-8')
                     CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
         # AG Table and Widen UI
         col1, col2, col3 = st.columns([1, 1, 1])
@@ -298,34 +309,29 @@ with tab1:
 
         if not check_box:
             st.write("Preview:")
-            st.dataframe(MAIN_DF)#len(MAIN_DF)
+            if 'final_df' in st.session_state:
+                st.dataframe(st.session_state.final_df)
+            else:
+                st.write("test no preview")
         elif check_box:
             st.write("Preview:")
-            df = MAIN_DF.reset_index()
-            gb = GridOptionsBuilder.from_dataframe(MAIN_DF)
-            # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
-            gb.configure_default_column(
-                enablePivot=True, enableValue=True, enableRowGroup=True
-            )
-            gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-            gb.configure_side_bar()
-            gridOptions = gb.build()
-            st.info(
-                f"""
-                        💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
-                        """
-            )
-
-            response = AgGrid(
-                df,
-                gridOptions=gridOptions,
-                enable_enterprise_modules=True,
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
-                height=1000,
-                fit_columns_on_grid_load=True,
-                configure_side_bar=True,
-            )
+            if 'final_df' in st.session_state:
+                df = st.session_state.final_df.reset_index()
+                gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
+                # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
+                gb.configure_default_column(
+                    enablePivot=True, enableValue=True, enableRowGroup=True
+                )
+                gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+                gb.configure_side_bar()
+                gridOptions = gb.build()
+                st.info(
+                    f"""
+                            💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
+                            """)
+            else:
+                st.write("test no preview")
+            response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
     # D. Show CSV Download Button when CSV data exists:
     if CSV_DOWNLOADABLE and CSV is not None:
         # Generate a file timestamp:
@@ -338,7 +344,7 @@ with tab1:
 ## --------------------------------------------------------------------
 
 with tab2:
-
+    st.title("Google Search Console API Explorer")
     st.write("")
     st.write("")
 
@@ -367,6 +373,7 @@ with tab2:
 ## --------------------------------------------------------------------
 
 with tab3:
+    st.title("Google Search Console API Explorer")
     st.write('Countries')
     countries = ['isr', 'usa', 'gbr', 'qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png']
     for country in countries:
@@ -374,5 +381,6 @@ with tab3:
 ## --------------------------------------------------------------------
 
 with tab4:
+    st.title("Google Search Console API Explorer")
     st.write('Devices')
     st.write('DESKTOP,MOBILE,TABLET')
