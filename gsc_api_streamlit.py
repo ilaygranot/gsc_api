@@ -52,8 +52,6 @@ def parse_request(type_selectbox, selected_country, country_operator, selected_d
     request['startRow'] = startRow # Start at row 0
     request['type'] = type_selectbox # Filter results to the following type
     # Optionally add page/query/countries/devices operators to the request, depending what the user has selected in the interface
-    country_id = 3
-    device_id = 3
     if page_operator != 'None' or query_operator != 'None' or country_operator != 'None' or device_operator != 'None':
         request['dimensionFilterGroups'] = [{ 'filters': [] }]
     if page_operator != 'None':
@@ -69,7 +67,6 @@ def parse_request(type_selectbox, selected_country, country_operator, selected_d
                     "expression": query_expression
                     })
     if country_operator != 'None':
-        device_id = 4
         request['dimensionFilterGroups'][0]['filters'].append({
                     "dimension": "COUNTRY",
                     "operator": country_operator,
@@ -99,10 +96,8 @@ def parse_request(type_selectbox, selected_country, country_operator, selected_d
             data['date'].append(row['keys'][0] or 0)
             data['page'].append(row['keys'][1] or 0)
             data['query'].append(row['keys'][2] or 0)
-            if country_operator != 'None':
-                data['country'].append(row['keys'][country_id] or 0)
-            if device_operator != 'None':
-                data['device'].append(row['keys'][device_id] or 0)
+            data['country'].append(row['keys'][3] or 0)
+            data['device'].append(row['keys'][4] or 0)
             data['clicks'].append(row['clicks'] or 0)
             data['ctr'].append(row['ctr'] or 0)
             data['impressions'].append(row['impressions'] or 0)
