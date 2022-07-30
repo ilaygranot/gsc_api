@@ -225,10 +225,10 @@ with tab1:
             with col1:
                 selected_country = st.text_input('Enter Country')
                 if 'country' in st.session_state:
-                    #selected_countrytest = st.text_input('Enter Countrytest', st.session_state.country)
+                    selected_countrytest = st.text_input('Enter Countrytest', st.session_state.country)
                     st.write(st.session_state.country)
-                #else:
-                    #selected_countrytest = st.text_input('Enter Countrytest', '')
+                else:
+                    selected_countrytest = st.text_input('Enter Countrytest', '')
             with col2:
                 country_operator = st.selectbox('Country Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
             # Show Device Dropdown Field:
