@@ -67,7 +67,7 @@ def parse_request(type_selectbox, selected_country, country_operator, selected_d
     request = {}
     request['startDate'] =  dt_to_str(start_date) # Get today's date (while loop)
     request['endDate'] =  dt_to_str(end_date) # Get today's date (while loop)
-    request['dimensions'] = ['DATE','PAGE','QUERY', 'DEVICE', 'COUNTRY'] # Extract This information
+    request['dimensions'] = ['DATE','PAGE','QUERY', 'COUNTRY', 'DEVICE'] # Extract This information
     request['rowLimit'] = rowLimit # Set number of rows to extract at once (min 1 , max 25k)
     request['startRow'] = startRow # Start at row 0
     request['type'] = type_selectbox # Filter results to the following type
@@ -292,30 +292,30 @@ with tab1:
         # AG Table and Widen UI
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
-            st.caption("")
-            check_box = st.checkbox(
-                "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
-            )
-            st.caption("")
+            if 'final_df' in st.session_state:
+                st.caption("")
+                check_box = st.checkbox(
+                    "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
+                )
+                st.caption("")
 
         with col2:
-            st.caption("")
-            st.checkbox(
-                "Widen layout",
-                key="widen",
-                help="Tick this box to switch the layout to 'wide' mode",
-            )
-            st.caption("")
+            if 'final_df' in st.session_state:
+                st.caption("")
+                st.checkbox(
+                    "Widen layout",
+                    key="widen",
+                    help="Tick this box to switch the layout to 'wide' mode",
+                )
+                st.caption("")
 
         if not check_box:
-            st.write("Preview:")
             if 'final_df' in st.session_state:
+                st.write("Preview:")
                 st.dataframe(st.session_state.final_df)
-            else:
-                st.write("test no preview")
         elif check_box:
-            st.write("Preview:")
             if 'final_df' in st.session_state:
+                st.write("Preview:")
                 df = st.session_state.final_df.reset_index()
                 gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
                 # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
@@ -329,8 +329,6 @@ with tab1:
                     f"""
                             💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
                             """)
-            else:
-                st.write("test no preview")
             response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
     # D. Show CSV Download Button when CSV data exists:
     if CSV_DOWNLOADABLE and CSV is not None:
