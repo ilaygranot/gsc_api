@@ -16,7 +16,7 @@ from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
 components.html(
-    html_string = """
+    """
         <script>
         console.log('hey')
         alert('hey')
