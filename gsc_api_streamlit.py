@@ -229,6 +229,8 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         selected_device = st.empty()
         with col1:
             device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0, on_change=device_operator_func, kwargs=dict(device_operator=device_operator))
+        with col2:
+            st.write('test')
         # Filter results to the following type::
         st.write('--------------------')
         st.write('Filter results to the following type:')
