@@ -154,7 +154,7 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 # A. Set Streamlit Page Title:
 st.title("Google Search Console API Explorer")
-st.write(st.session_state)
+
 # B. Show Login Form:
 if 'webmasters_service' not in st.session_state:
     # Handle Google Login Flow [GET request]:
@@ -197,13 +197,6 @@ if 'webmasters_service' not in st.session_state:
 # C. Show GSC Streamlit Form when the user is logged in:
 if 'verified_sites_urls' in st.session_state: # Check if we have the user's verified properties list, meaning they are logged in
     # Streamlit Form:
-    def device_operator_func():
-        global selected_device
-        with col2:
-            if device_operator == 'INCLUDING_REGEX' or device_operator == 'EXCLUDING_REGEX':
-                selected_device = st.text_input('Choose Device')
-            else:
-                selected_device = st.selectbox('Choose Device',['DESKTOP','MOBILE','TABLET'],0)
     with st.form("form"):
         properties = None
         # Show Properties Dropdown:
@@ -216,7 +209,7 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         st.write('--------------------')
         col1, col2 = st.columns(2)
         with col1:
-            country_operator = st.selectbox('Country Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            country_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
         with col2:
             selected_country = st.selectbox(
                 'Choose Country',
@@ -225,12 +218,11 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         # Show Device Dropdown Field:
         st.write('--------------------')
         col1, col2 = st.columns(2)
-        device_operator = st.empty()
-        selected_device = st.empty()
         with col1:
-            device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0, on_change=device_operator_func, kwargs=dict(device_operator=device_operator))
+            device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
         with col2:
-            st.write('test')
+            #selected_device = st.selectbox('Choose Device', ['DESKTOP','MOBILE','TABLET'], 0)
+            selected_device = st.text_input('Choose Device')
         # Filter results to the following type::
         st.write('--------------------')
         st.write('Filter results to the following type:')
