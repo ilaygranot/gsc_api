@@ -26,9 +26,16 @@ st.set_page_config(
     layout=layout, page_title="Google Search Console Connector", page_icon="https://iconarchive.com/download/i79580/martz90/hex/files.ico"
 )
 
+# -----------------------------------------------------
+
+# Tabs
+if 'verified_sites_urls' in st.session_state:
+    tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
+else:
+    tab1, tab2 = st.tabs(["Main", "About"])
+
 ## 2. Global Variables: --------------------------------------------
 
-tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
 CSV = None
 CSV_DOWNLOADABLE = False
 BUTTON_STYLE = """
