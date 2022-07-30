@@ -197,6 +197,13 @@ if 'webmasters_service' not in st.session_state:
 # C. Show GSC Streamlit Form when the user is logged in:
 if 'verified_sites_urls' in st.session_state: # Check if we have the user's verified properties list, meaning they are logged in
     # Streamlit Form:
+    def device_operator_func():
+        global selected_device
+        with col2:
+            if device_operator == 'INCLUDING_REGEX' or device_operator == 'EXCLUDING_REGEX':
+                selected_device = st.text_input('Choose Device')
+            else:
+                selected_device = st.selectbox('Choose Device',['DESKTOP','MOBILE','TABLET'],0)
     with st.form("form"):
         properties = None
         # Show Properties Dropdown:
@@ -220,13 +227,6 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         col1, col2 = st.columns(2)
         device_operator = st.empty()
         selected_device = st.empty()
-        def device_operator_func():
-            global selected_device
-            with col2:
-                if device_operator == 'INCLUDING_REGEX' or device_operator == 'EXCLUDING_REGEX':
-                    selected_device = st.text_input('Choose Device')
-                else:
-                    selected_device = st.selectbox('Choose Device',['DESKTOP','MOBILE','TABLET'],0)
         with col1:
             device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0, on_change=device_operator_func, kwargs=dict(device_operator=device_operator))
         # Filter results to the following type::
