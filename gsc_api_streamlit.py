@@ -298,6 +298,8 @@ with tab1:
                     "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
                 )
                 st.caption("")
+            else:
+                check_box = st.empty()
 
         with col2:
             if 'final_df' in st.session_state:
