@@ -29,10 +29,7 @@ st.set_page_config(
 # -----------------------------------------------------
 
 # Tabs
-if 'verified_sites_urls' in st.session_state:
-    tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
-else:
-    tab1, tab2 = st.tabs(["Main", "About"])
+tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
 
 ## 2. Global Variables: --------------------------------------------
 
