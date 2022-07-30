@@ -14,10 +14,6 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
-html_string = '<h3>this is an html string</h3><a href="javascript:window.close();">close</a>'
-
-st.markdown(html_string, unsafe_allow_html=True)
-
 # -----------------------------------------------------
 
 # The code below is for the layout of the page
@@ -173,6 +169,8 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
+    html_string = '<h3>this is an html string</h3><a href="javascript:window.close();">close</a>'
+    st.markdown(html_string, unsafe_allow_html=True)
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
         # Handle Google Login Flow [GET request]:
