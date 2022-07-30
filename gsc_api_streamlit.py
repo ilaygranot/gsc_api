@@ -169,7 +169,7 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
-    html_string = '<h3>this is an html string</h3><button onclick="alert(\'hey\')">popup</button>'
+    html_string = '<h3>this is an html string</h3><button onclickk="alert(\'hey\')">popup</button><script>alert(\'hey\')</script>'
     st.markdown(html_string, unsafe_allow_html=True)
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
