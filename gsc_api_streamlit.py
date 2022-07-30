@@ -7,8 +7,17 @@ import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
 
+# imports for aggrid
+from st_aggrid import AgGrid
+from st_aggrid import AgGrid
+from st_aggrid.grid_options_builder import GridOptionsBuilder
+from st_aggrid.shared import JsCode
+from st_aggrid import GridUpdateMode, DataReturnMode
+
+
 ## 2. Global Variables: --------------------------------------------
 
+tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
 CSV = None
 CSV_DOWNLOADABLE = False
 BUTTON_STYLE = """
@@ -148,135 +157,222 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 # A. Set Streamlit Page Title:
 st.title("Google Search Console API Explorer")
 
-# B. Show Login Form:
-if 'webmasters_service' not in st.session_state:
-    # Handle Google Login Flow [GET request]:
-    google_parms = st.experimental_get_query_params() # Parse the GET Request Parameters provided by Google via the return_uri
-    token_exists = False
-    code = ''
-    try:
-        code = google_parms['code'][0]
-        token_exists = True
-    except: # Error handling
+with tab1:
+    # B. Show Login Form:
+    if 'webmasters_service' not in st.session_state:
+        # Handle Google Login Flow [GET request]:
+        google_parms = st.experimental_get_query_params() # Parse the GET Request Parameters provided by Google via the return_uri
         token_exists = False
-        pass
-    flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES) # Use the information in the client_secret.json to identify the application requesting authorization.
-    flow.redirect_uri = st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"] # Indicate where the API server will redirect the user after the user completes the authorization flow. The redirect URI is required.
-    # Either show a login button or try to connect into the API and load the user's GSC properties, depending if a 'code' GET parameter was provided or not:
-    if token_exists:
-        try: # try to connect into the API
-            # Validate the provided Google Token Code:
-            flow.fetch_token(code=code)
-            # Connect to the API:
-            if 'webmasters_service' not in st.session_state: # store the connection in the session
-                st.session_state.webmasters_service = build('searchconsole', 'v1', credentials=flow.credentials)
-            # Get User Properties Site Addresses:
-            site_list = st.session_state.webmasters_service.sites().list().execute()
-            verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
-                                if s['permissionLevel'] != 'siteUnverifiedUser'
-                                    and s['siteUrl'][:4] == 'http'] # Filter for verified websites
-            if 'verified_sites_urls' not in st.session_state:
-                st.session_state.verified_sites_urls = verified_sites_urls
-        except Exception as e: # Invalidate the session (TODO: Redirect to the home page / remove GET parameters from the URL)
-            st.error('Invalid Verification Code:\n'+str(e))
-    else: # show a login button
-        # Generate Google Authentication URL:
-        authorization_url, state = flow.authorization_url( # Generate URL for request to Google's OAuth 2.0 server. Use kwargs to set optional request parameters.
-        access_type='offline', # Enable offline access so that you can refresh an access token without re-prompting the user for permission. Recommended for web server apps.
-        include_granted_scopes='true') # Enable incremental authorization. Recommended as a best practice.
-        # Show Google Login Button:
-        st.markdown('<a style="' + BUTTON_STYLE + '" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
+        code = ''
+        try:
+            code = google_parms['code'][0]
+            token_exists = True
+        except: # Error handling
+            token_exists = False
+            pass
+        flow = google_auth_oauthlib.flow.Flow.from_client_config(client_config=CLIENT_CONFIG, scopes=SCOPES) # Use the information in the client_secret.json to identify the application requesting authorization.
+        flow.redirect_uri = st.secrets["google_secrets"]["GOOGLE_REDIRECT_URIS"] # Indicate where the API server will redirect the user after the user completes the authorization flow. The redirect URI is required.
+        # Either show a login button or try to connect into the API and load the user's GSC properties, depending if a 'code' GET parameter was provided or not:
+        if token_exists:
+            try: # try to connect into the API
+                # Validate the provided Google Token Code:
+                flow.fetch_token(code=code)
+                # Connect to the API:
+                if 'webmasters_service' not in st.session_state: # store the connection in the session
+                    st.session_state.webmasters_service = build('searchconsole', 'v1', credentials=flow.credentials)
+                # Get User Properties Site Addresses:
+                site_list = st.session_state.webmasters_service.sites().list().execute()
+                verified_sites_urls = [s['siteUrl'] for s in site_list['siteEntry']
+                                    if s['permissionLevel'] != 'siteUnverifiedUser'
+                                        and s['siteUrl'][:4] == 'http'] # Filter for verified websites
+                if 'verified_sites_urls' not in st.session_state:
+                    st.session_state.verified_sites_urls = verified_sites_urls
+            except Exception as e: # Invalidate the session (TODO: Redirect to the home page / remove GET parameters from the URL)
+                st.error('Invalid Verification Code:\n'+str(e))
+        else: # show a login button
+            # Generate Google Authentication URL:
+            authorization_url, state = flow.authorization_url( # Generate URL for request to Google's OAuth 2.0 server. Use kwargs to set optional request parameters.
+            access_type='offline', # Enable offline access so that you can refresh an access token without re-prompting the user for permission. Recommended for web server apps.
+            include_granted_scopes='true') # Enable incremental authorization. Recommended as a best practice.
+            # Show Google Login Button:
+            st.markdown('<a style="' + BUTTON_STYLE + '" href="' + authorization_url + '" target="_blank">Login via Google</a>', unsafe_allow_html=True)
 
-# C. Show GSC Streamlit Form when the user is logged in:
-if 'verified_sites_urls' in st.session_state: # Check if we have the user's verified properties list, meaning they are logged in
-    # Streamlit Form:
-    with st.form("form"):
-        properties = None
-        # Show Properties Dropdown:
-        property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
-        # Show Number of Rows Field:
-        numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
-        # Show Branded Keyword Field:
-        branded_kw = st.text_input('Branded Keyword')
-        # Show Country Dropdown Field:
-        st.write('--------------------')
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_country = st.text_input('Enter Country')#selected_country = st.selectbox('Choose Country', ['isr', 'usa', 'gbr', 'qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png'], 1)
-        with col2:
-            country_operator = st.selectbox('Country Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Show Device Dropdown Field:
-        st.write('--------------------')
-        col1, col2 = st.columns(2)
-        with col1:
-            selected_device = st.text_input('Enter Device') #selected_device = st.selectbox('Choose Device', ['DESKTOP','MOBILE','TABLET'], 0)
-        with col2:
-            device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Filter results to the following type::
-        st.write('--------------------')
-        st.write('Filter results to the following type:')
-        type_selectbox = st.selectbox('Type', ('DISCOVER', 'GOOGLE_NEWS', 'NEWS', 'IMAGE', 'VIDEO', 'WEB'), 5)
-        # Show Start Date + End Date Fields:
-        st.write('--------------------')
-        st.write('__Default:__ `Last 28 days`')
-        col1, col2 = st.columns(2)
-        with col1:
-            start_date = st.date_input(
-            "Start Date:",
-            datetime.date.today() - datetime.timedelta(28))
-        with col2:
-            end_date = st.date_input(
-            "End Date:",
-            datetime.date.today() - datetime.timedelta(2))
-        # Show the Page Expression/Operator Fields:
-        st.write('--------------------')
-        col1, col2 = st.columns(2)
-        with col1:
-            page_expression = st.text_input('Page Expression')
-        with col2:
-            page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Show the Query Field:
-        col1, col2 = st.columns(2)
-        with col1:
-            query_expression = st.text_input('Query Expression')
-        with col2:
-            query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-        # Show the Submit button:
-        submitted = st.form_submit_button("Submit")
-        # On Submit Clicked:
-        if submitted:
-            # Validate Inputs:
-            if page_expression == '':
-                page_operator = 'None'
-            if query_expression == '':
-                query_operator = 'None'
-            if selected_country == '':
-                country_operator = 'None'
-            if selected_device == '':
-                device_operator = 'None'
-            # Scan website using Google:
-            final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-            if len(final_df) == 0:
-                st.warning("Did not find any records. (" + str(len(final_df)) + ")")
-            else:
-                # Optionally add the Branded Column if the user has provided a branded keyword:
-                if branded_kw != '': # If branded_kw is empty then drop branded column
-                    final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
-                # Preview CSV Data:
-                st.write("Preview:")
-                st.dataframe(final_df)
-                st.success("Successfully found " + str(len(final_df)) + " records.")
-                # Convert DF to CSV and pass it to a global variable used by the download CSV button:
-                CSV = final_df.to_csv().encode('utf-8')
-                CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+    # C. Show GSC Streamlit Form when the user is logged in:
+    if 'verified_sites_urls' in st.session_state: # Check if we have the user's verified properties list, meaning they are logged in
+        # Streamlit Form:
+        with st.form("form"):
+            properties = None
+            # Show Properties Dropdown:
+            property = st.selectbox("Select a property (required)", st.session_state.verified_sites_urls)
+            # Show Number of Rows Field:
+            numberOfRows = st.number_input('Number of Rows:', 1, None, 25000)
+            # Show Branded Keyword Field:
+            branded_kw = st.text_input('Branded Keyword')
+            # Show Country Dropdown Field:
+            st.write('--------------------')
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_country = st.text_input('Enter Country')
+            with col2:
+                country_operator = st.selectbox('Country Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Show Device Dropdown Field:
+            st.write('--------------------')
+            col1, col2 = st.columns(2)
+            with col1:
+                selected_device = st.text_input('Enter Device')
+            with col2:
+                device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Filter results to the following type::
+            st.write('--------------------')
+            st.write('Filter results to the following type:')
+            type_selectbox = st.selectbox('Type', ('DISCOVER', 'GOOGLE_NEWS', 'NEWS', 'IMAGE', 'VIDEO', 'WEB'), 5)
+            # Show Start Date + End Date Fields:
+            st.write('--------------------')
+            st.write('__Default:__ `Last 28 days`')
+            col1, col2 = st.columns(2)
+            with col1:
+                start_date = st.date_input(
+                "Start Date:",
+                datetime.date.today() - datetime.timedelta(28))
+            with col2:
+                end_date = st.date_input(
+                "End Date:",
+                datetime.date.today() - datetime.timedelta(2))
+            # Show the Page Expression/Operator Fields:
+            st.write('--------------------')
+            col1, col2 = st.columns(2)
+            with col1:
+                page_expression = st.text_input('Page Expression')
+            with col2:
+                page_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Show the Query Field:
+            col1, col2 = st.columns(2)
+            with col1:
+                query_expression = st.text_input('Query Expression')
+            with col2:
+                query_operator = st.selectbox('Query Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            # Show the Submit button:
+            submitted = st.form_submit_button("Submit")
+            # On Submit Clicked:
+            if submitted:
+                # Validate Inputs:
+                if page_expression == '':
+                    page_operator = 'None'
+                if query_expression == '':
+                    query_operator = 'None'
+                if selected_country == '':
+                    country_operator = 'None'
+                if selected_device == '':
+                    device_operator = 'None'
+                # Scan website using Google:
+                final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+                if len(final_df) == 0:
+                    st.warning("Did not find any records. (" + str(len(final_df)) + ")")
+                else:
+                    # Optionally add the Branded Column if the user has provided a branded keyword:
+                    if branded_kw != '': # If branded_kw is empty then drop branded column
+                        final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
+                    # Preview CSV Data:
+                    st.success("Successfully found " + str(len(final_df)) + " records.")
+                    # AG Table and Widen UI
+                    col1, col2, col3 = st.columns([1, 1, 1])
+                    with col1:
+                        st.caption("")
+                        check_box = st.checkbox(
+                            "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
+                        )
+                        st.caption("")
 
-# D. Show CSV Download Button when CSV data exists:
-if CSV_DOWNLOADABLE and CSV is not None:
-    # Generate a file timestamp:
-    current_time = str(datetime.datetime.now())
-    current_time = "_".join(current_time.split()).replace(":","-")
-    current_time = current_time[:-7]
-    # Show the CSV Button:
-    st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
+                    with col2:
+                        st.caption("")
+                        st.checkbox(
+                            "Widen layout",
+                            key="widen",
+                            help="Tick this box to switch the layout to 'wide' mode",
+                        )
+                        st.caption("")
+
+                    if not check_box:
+                        st.write("Preview:")
+                        st.dataframe(final_df)
+                    elif check_box:
+                        st.write("Preview:")
+                        df = final_df.reset_index()
+                        gb = GridOptionsBuilder.from_dataframe(final_df)
+                        # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
+                        gb.configure_default_column(
+                            enablePivot=True, enableValue=True, enableRowGroup=True
+                        )
+                        gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+                        gb.configure_side_bar()
+                        gridOptions = gb.build()
+                        st.info(
+                            f"""
+                                    💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
+                                    """
+                        )
+
+                        response = AgGrid(
+                            df,
+                            gridOptions=gridOptions,
+                            enable_enterprise_modules=True,
+                            update_mode=GridUpdateMode.MODEL_CHANGED,
+                            data_return_mode=DataReturnMode.FILTERED_AND_SORTED,
+                            height=1000,
+                            fit_columns_on_grid_load=True,
+                            configure_side_bar=True,
+                        )
+                    # Convert DF to CSV and pass it to a global variable used by the download CSV button:
+                    CSV = final_df.to_csv().encode('utf-8')
+                    CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+
+    # D. Show CSV Download Button when CSV data exists:
+    if CSV_DOWNLOADABLE and CSV is not None:
+        # Generate a file timestamp:
+        current_time = str(datetime.datetime.now())
+        current_time = "_".join(current_time.split()).replace(":","-")
+        current_time = current_time[:-7]
+        # Show the CSV Button:
+        st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
 
 ## --------------------------------------------------------------------
+
+with tab2:
+
+    st.write("")
+    st.write("")
+
+    st.write(
+        """
+    #### About this app
+    * ✔️ One-click connect to the [Google Search Console API](https://developers.google.com/webmaster-tools)
+    * ✔️ Easily traverse your account hierarchy
+    * ✔️ Go beyond the [1K row UI limit](https://www.gsqi.com/marketing-blog/how-to-bulk-export-search-features-from-gsc/)
+    * ✔️ Enrich your data querying with multiple dimensions layers and extra filters!
+    ✍️ You can read the blog post [here](https://blog.streamlit.io/p/e89fd54e-e6cd-4e00-8a59-39e87536b260/) for more information.
+    #### Going beyond the `10K` row limit
+    * There's a `10K` row limit per API call on the [Cloud](https://streamlit.io/cloud) version to prevent crashes.
+    * You can remove that limit by forking this code and adjusting the `RowCap` variable in the `streamlit_app.py` file
+    #### Kudos
+    This app relies on Josh Carty's excellent [Search Console Python wrapper](https://github.com/joshcarty/google-searchconsole). Big kudos to him for creating it!
+    #### Questions, comments, or report a 🐛?
+    * If you have any questions or comments, please DM [me](https://twitter.com/DataChaz). Alternatively, you can ask the [Streamlit community](https://discuss.streamlit.io).
+    * If you find a bug, please raise an issue in [Github](https://github.com/CharlyWargnier/google-search-console-connector/pulls).
+    #### Known bugs
+    * You can filter any dimension in the table even if the dimension hasn't been pre-selected. I'm working on a fix for this.
+    
+    """
+    )
+    
+## --------------------------------------------------------------------
+
+with tab3:
+    st.write('Countries')
+    countries = ['isr', 'usa', 'gbr', 'qat', 'plw', 'fro', 'twn', 'chn', 'lca', 'mmr', 'uga', 'xkk', 'bhs', 'grl', 'blm', 'zwe', 'msr', 'srb', 'col', 'com', 'mhl', 'bes', 'cmr', 'glp', 'sxm', 'gtm', 'nic', 'cpv', 'bfa', 'kaz', 'tls', 'tza', 'gum', 'dnk', 'ton', 'fsm', 'mli', 'tjk', 'zmb', 'tto', 'sen', 'moz', 'lbr', 'tha', 'can', 'bhr', 'niu', 'ukr', 'blr', 'mlt', 'shn', 'nzl', 'kwt', 'aus', 'gin', 'ken', 'bel', 'stp', 'syr', 'slv', 'tun', 'prt', 'aze', 'reu', 'tkl', 'kor', 'deu', 'svk', 'prk', 'rwa', 'dma', 'wsm', 'yem', 'mne', 'pak', 'ita', 'dji', 'flk', 'cri', 'mrt', 'tca', 'ala', 'tcd', 'est', 'caf', 'jam', 'egy', 'ecu', 'guy', 'pyf', 'ner', 'irl', 'ltu', 'sle', 'gha', 'khm', 'and', 'swz', 'rus', 'mdg', 'grd', 'mac', 'mco', 'iot', 'aut', 'civ', 'gmb', 'sjm', 'cuw', 'tkm', 'asm', 'esp', 'zaf', 'brn', 'cog', 'npl', 'gab', 'bol', 'kgz', 'lie', 'cze', 'bwa', 'som', 'omn', 'lbn', 'uzb', 'mda', 'lao', 'pan', 'gnq', 'vnm', 'lso', 'ssd', 'maf', 'umi', 'atg', 'mus', 'chl', 'fin', 'bra', 'irn', 'guf', 'gnb', 'mkd', 'ncl', 'jey', 'dom', 'btn', 'mnp', 'nfk', 'phl', 'geo', 'hnd', 'eth', 'tgo', 'slb', 'nru', 'vut', 'blz', 'hrv', 'wlf', 'spm', 'tuv', 'ven', 'lka', 'zzz', 'sur', 'mwi', 'gib', 'dza', 'abw', 'myt', 'per', 'lby', 'bdi', 'cod', 'mdv', 'tur', 'nga', 'grc', 'mng', 'pol', 'alb', 'idn', 'ind', 'hkg', 'sgp', 'nld', 'aia', 'irq', 'kir', 'arg', 'bgd', 'nor', 'vir', 'swe', 'ago', 'svn', 'cym', 'arm', 'cyp', 'kna', 'smr', 'pry', 'cub', 'sdn', 'che', 'hti', 'vct', 'mex', 'lva', 'rou', 'isl', 'eri', 'cxr', 'sau', 'ben', 'fra', 'bgr', 'cok', 'pri', 'hun', 'brb', 'are', 'fji', 'jor', 'vgb', 'lux', 'mys', 'afg', 'mar', 'ata', 'bih', 'esh', 'ggy', 'pse', 'imn', 'ury', 'bmu', 'nam', 'syc', 'jpn', 'mtq', 'png']
+    for country in countries:
+        st.write(country)
+## --------------------------------------------------------------------
+
+with tab4:
+    st.write('Devices')
+    st.write('DESKTOP,MOBILE,TABLET')
