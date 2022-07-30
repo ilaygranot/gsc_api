@@ -222,15 +222,17 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         device_operator_has_regex = False
         with col1:
             device_operator = st.selectbox('Device Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
-            if device_operator == 'INCLUDING_REGEX' or device_operator == 'EXCLUDING_REGEX':
-                device_operator_has_regex = True
-            else:
-                device_operator_has_regex = False
+            with device_operator:
+                if device_operator == 'INCLUDING_REGEX' or device_operator == 'EXCLUDING_REGEX':
+                    device_operator_has_regex = True
+                else:
+                    device_operator_has_regex = False
         with col2:
-            if device_operator_has_regex:
-                selected_device = st.text_input('Choose Device')
-            else:
-                selected_device = st.selectbox('Choose Device',['DESKTOP','MOBILE','TABLET'],0)
+            with device_operator:
+                if device_operator_has_regex:
+                    selected_device = st.text_input('Choose Device')
+                else:
+                    selected_device = st.selectbox('Choose Device',['DESKTOP','MOBILE','TABLET'],0)
         # Filter results to the following type::
         st.write('--------------------')
         st.write('Filter results to the following type:')
