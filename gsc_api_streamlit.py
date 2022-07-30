@@ -6,7 +6,6 @@ import datetime
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
-import streamlit.components.v1 as components
 
 # imports for aggrid
 from st_aggrid import AgGrid
@@ -25,21 +24,6 @@ else:
 
 st.set_page_config(
     layout=layout, page_title="Google Search Console Connector", page_icon="https://iconarchive.com/download/i79580/martz90/hex/files.ico"
-)
-
-# -----------------------------------------------------
-
-components.html(
-    """
-        <script>
-        document.addEventListener("DOMContentLoaded", function(){
-            document.getElementById('mypop').addEventListener('click', function(){
-                alert('hey');
-            });
-        });
-        </script>
-        """,
-    height=600,
 )
 
 ## 2. Global Variables: --------------------------------------------
@@ -185,12 +169,6 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
-    components.html(
-        """
-            <button id="mypop">pop</button>
-            """,
-        height=600,
-    )
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
         # Handle Google Login Flow [GET request]:
