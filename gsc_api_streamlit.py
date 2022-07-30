@@ -31,9 +31,11 @@ st.set_page_config(
 
 components.html(
     """
-        <script defer>
-        document.getElementById('mypop').addEventListener('onclick', function(){
-            alert('hey');
+        <script>
+        document.addEventListener("DOMContentLoaded", function(){
+            document.getElementById('mypop').addEventListener('click', function(){
+                alert('hey');
+            });
         });
         </script>
         """,
