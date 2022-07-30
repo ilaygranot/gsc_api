@@ -14,6 +14,10 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
+html_string = '<h3>this is an html string</h3><a href="javascript:window.close();">close</a>'
+
+st.markdown(html_string, unsafe_allow_html=True)
+
 # -----------------------------------------------------
 
 # The code below is for the layout of the page
@@ -331,7 +335,7 @@ with tab1:
                     f"""
                             💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
                             """)
-            response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
+                response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
     # D. Show CSV Download Button when CSV data exists:
     if CSV_DOWNLOADABLE and CSV is not None:
         # Generate a file timestamp:
