@@ -209,7 +209,7 @@ if 'verified_sites_urls' in st.session_state: # Check if we have the user's veri
         st.write('--------------------')
         col1, col2 = st.columns(2)
         with col1:
-            country_operator = st.selectbox('Page Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
+            country_operator = st.selectbox('Country Operator', ('CONTAINS', 'EQUALS', 'NOT_CONTAINS', 'NOT_EQUALS', 'INCLUDING_REGEX', 'EXCLUDING_REGEX'), 0)
         with col2:
             selected_country = st.selectbox(
                 'Choose Country',
