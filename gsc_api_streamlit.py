@@ -6,6 +6,7 @@ import datetime
 import google_auth_oauthlib.flow
 from googleapiclient.discovery import build
 from collections import defaultdict
+import streamlit.components.v1 as components
 
 # imports for aggrid
 from st_aggrid import AgGrid
@@ -14,6 +15,15 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
+components.html(
+    html_string = """
+        <script>
+        console.log('hey')
+        alert('hey')
+        </script>
+        """,
+    height=600,
+)
 # -----------------------------------------------------
 
 # The code below is for the layout of the page
@@ -169,9 +179,6 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
-    html_string = """
-        <script src="script.js"></script>
-        """
     st.markdown(html_string, unsafe_allow_html=True)
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
