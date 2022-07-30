@@ -15,15 +15,6 @@ from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import JsCode
 from st_aggrid import GridUpdateMode, DataReturnMode
 
-components.html(
-    """
-        <script>
-        console.log('hey')
-        alert('hey')
-        </script>
-        """,
-    height=600,
-)
 # -----------------------------------------------------
 
 # The code below is for the layout of the page
@@ -34,6 +25,19 @@ else:
 
 st.set_page_config(
     layout=layout, page_title="Google Search Console Connector", page_icon="https://iconarchive.com/download/i79580/martz90/hex/files.ico"
+)
+
+# -----------------------------------------------------
+
+components.html(
+    """
+        <script defer>
+        document.getElementById('mypop').addEventListener('onclick', function(){
+            alert('hey');
+        });
+        </script>
+        """,
+    height=600,
 )
 
 ## 2. Global Variables: --------------------------------------------
@@ -179,7 +183,12 @@ def scan_website(my_property, max_rows, type_selectbox, selected_country, countr
 
 with tab1:
     st.title("Google Search Console API Explorer")
-    st.markdown(html_string, unsafe_allow_html=True)
+    components.html(
+        """
+            <button id="mypop">pop</button>
+            """,
+        height=600,
+    )
     # B. Show Login Form:
     if 'webmasters_service' not in st.session_state:
         # Handle Google Login Flow [GET request]:
