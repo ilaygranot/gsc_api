@@ -388,8 +388,3 @@ if 'verified_sites_urls' in st.session_state:
                             💡 Note: Countries selected here will automatically move to the form.
                             """)
 ## --------------------------------------------------------------------
-if 'verified_sites_urls' in st.session_state:
-    with tab4:
-        st.title("Google Search Console API Explorer")
-        st.write('Devices')
-        st.write('DESKTOP,MOBILE,TABLET')
