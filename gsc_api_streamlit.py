@@ -29,7 +29,7 @@ st.set_page_config(
 # -----------------------------------------------------
 
 # Tabs
-tab1, tab2, tab3, tab4 = st.tabs(["Main", "About", "Country List", "Device List"])
+tab1, tab2, tab3 = st.tabs(["Main", "About", "Country List"])
 
 ## 2. Global Variables: --------------------------------------------
 
