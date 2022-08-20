@@ -292,7 +292,7 @@ with tab1:
                     st.line_chart(
                     final_df,
                     x="date",
-                    y=["clicks", "ctr"],  # <-- You can pass multiple columns!
+                    y=["clicks"],  # <-- You can pass multiple columns!
                     )
                     st.success("Successfully found " + str(len(final_df)) + " records.")
                     # Convert DF to CSV and pass it to a global variable used by the download CSV button:
