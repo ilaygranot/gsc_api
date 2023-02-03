@@ -293,6 +293,8 @@ with tab1:
                     if download_directly:
                         st.write("Downloading the data directly to the computer")
                         st.write(final_df.to_csv(), unsafe_allow_html=True)
+                        CSV = final_df.to_csv().encode('utf-8')
+                        CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
                     else:
                         # Preview CSV Data:
                         st.line_chart(
