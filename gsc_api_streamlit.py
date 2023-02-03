@@ -288,16 +288,22 @@ with tab1:
                     # Optionally add the Branded Column if the user has provided a branded keyword:
                     if branded_kw != '': # If branded_kw is empty then drop branded column
                         final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
-                    # Preview CSV Data:
-                    st.line_chart(
-                    final_df,
-                    x="date",
-                    y=["clicks"],  # <-- You can pass multiple columns!
-                    )
-                    st.success("Successfully found " + str(len(final_df)) + " records.")
-                    # Convert DF to CSV and pass it to a global variable used by the download CSV button:
-                    CSV = final_df.to_csv().encode('utf-8')
-                    CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+                        
+                    download_directly = st.checkbox("Download data directly to the computer")
+                    if download_directly:
+                        st.write("Downloading the data directly to the computer")
+                        st.write(final_df.to_csv(), unsafe_allow_html=True)
+                    else:
+                        # Preview CSV Data:
+                        st.line_chart(
+                        final_df,
+                        x="date",
+                        y=["clicks"],  # <-- You can pass multiple columns!
+                        )
+                        st.success("Successfully found " + str(len(final_df)) + " records.")
+                        # Convert DF to CSV and pass it to a global variable used by the download CSV button:
+                        CSV = final_df.to_csv().encode('utf-8')
+                        CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
         # AG Table and Widen UI
         col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
