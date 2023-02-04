@@ -289,11 +289,6 @@ with tab1:
                     if branded_kw != '': # If branded_kw is empty then drop branded column
                         final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
                     # Preview CSV Data:
-                    st.line_chart(
-                    final_df,
-                    x="date",
-                    y=["clicks"],  # <-- You can pass multiple columns!
-                    )
                     st.success("Successfully found " + str(len(final_df)) + " records.")
                     # Convert DF to CSV and pass it to a global variable used by the download CSV button:
                     CSV = final_df.to_csv().encode('utf-8')
@@ -377,3 +372,4 @@ if 'verified_sites_urls' in st.session_state:
                             💡 Note: Countries selected here will automatically move to the form.
                             """)
 ## --------------------------------------------------------------------
+
