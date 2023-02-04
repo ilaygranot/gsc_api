@@ -279,6 +279,7 @@ with tab1:
                     country_operator = 'None'
                 if selected_device == '':
                     device_operator = 'None'
+
                 # Scan website using Google:
                 final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
                 st.session_state.final_df = final_df
@@ -289,67 +290,91 @@ with tab1:
                     if branded_kw != '': # If branded_kw is empty then drop branded column
                         final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
                     # Preview CSV Data:
-                    st.line_chart(
-                    final_df,
-                    x="date",
-                    y=["clicks"],  # <-- You can pass multiple columns!
-                    )
                     st.success("Successfully found " + str(len(final_df)) + " records.")
                     # Convert DF to CSV and pass it to a global variable used by the download CSV button:
                     CSV = final_df.to_csv().encode('utf-8')
                     CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
-        # AG Table and Widen UI
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col1:
-            if 'final_df' in st.session_state:
-                st.caption("")
-                check_box = st.checkbox(
-                    "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
-                )
-                st.caption("")
-            else:
-                check_box = st.empty()
 
-        with col2:
-            if 'final_df' in st.session_state:
-                st.caption("")
-                st.checkbox(
-                    "Widen layout",
-                    key="widen",
-                    help="Tick this box to switch the layout to 'wide' mode",
-                )
-                st.caption("")
+                # AG Table and Widen UI
+                col1, col2, col3 = st.columns([1, 1, 1])
+                with col1:
+                    if 'final_df' in st.session_state:
+                        st.caption("")
+                        check_box = st.checkbox(
+                            "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
+                        )
+                        st.caption("")
+                    else:
+                        check_box = st.empty()
 
-        if not check_box:
-            if 'final_df' in st.session_state:
-                st.write("Preview:")
-                st.dataframe(st.session_state.final_df)
-        elif check_box:
-            if 'final_df' in st.session_state:
-                st.write("Preview:")
-                df = st.session_state.final_df.reset_index()
-                gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
-                # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
-                gb.configure_default_column(
-                    enablePivot=True, enableValue=True, enableRowGroup=True
-                )
-                gb.configure_selection(selection_mode="multiple", use_checkbox=True)
-                gb.configure_side_bar()
-                gridOptions = gb.build()
-                st.info(
-                    f"""
-                            💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
-                            """)
-                response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
-    # D. Show CSV Download Button when CSV data exists:
-    if CSV_DOWNLOADABLE and CSV is not None:
-        # Generate a file timestamp:
-        current_time = str(datetime.datetime.now())
-        current_time = "_".join(current_time.split()).replace(":","-")
-        current_time = current_time[:-7]
-        # Show the CSV Button:
-        st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
+                with col2:
+                    if 'final_df' in st.session_state:
+                        st.caption("")
+                        widen = st.checkbox(
+                            "Widen layout",
+                            key="widen",
+                            help="Tick this box to switch the layout to 'wide' mode",
+                        )
+                        st.caption("")
 
+                # Show download or preview based on user's choice
+                download_only = st.checkbox("Download CSV only")
+                if not download_only:
+                    if 'final_df' in st.session_state:
+                        st.write("Preview:")
+                        if check_box:
+                            df = st.session_state.final_df.reset_index()
+                            gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
+                            # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
+                            gb.configure_default_column(
+                                enablePivot=True, enableValue=True, enableRowGroup=True
+                            )
+                            gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+                            gb.configure_side_bar()
+                            gridOptions = gb.build()
+                            st.info(
+                                f"""
+                                        💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
+                                        """)
+                            response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
+
+
+                with col3:
+                    if 'final_df' in st.session_state:
+                        st.caption("")
+                        download_checkbox = st.checkbox("Direct download the data as CSV")
+                        st.caption("")
+                    if download_checkbox:
+                        current_time = str(datetime.datetime.now())
+                        current_time = "".join(current_time.split()).replace(":","-")
+                        current_time = current_time[:-7]
+                        st.write("Downloading CSV file...")
+                        st.write("Please wait...")
+                        file_name = "GSC_API" + current_time + ".csv"
+                        st.write("File name: " + file_name)
+                        final_df.to_csv(index=False)
+
+                    else:
+                        if not check_box:
+                            if 'final_df' in st.session_state:
+                                st.write("Preview:")
+                                st.dataframe(st.session_state.final_df)
+                        elif check_box:
+                            if 'final_df' in st.session_state:
+                                st.write("Preview:")
+                                df = st.session_state.final_df.reset_index()
+                                gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
+                                gb.configure_default_column(
+                                enablePivot=True, enableValue=True, enableRowGroup=True
+                                )
+                                gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+                                gb.configure_side_bar()
+                                gridOptions = gb.build()
+                                st.info(
+                                f"""
+                                💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
+                                """)
+                                response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
 ## --------------------------------------------------------------------
 
 with tab2:
@@ -377,3 +402,4 @@ if 'verified_sites_urls' in st.session_state:
                             💡 Note: Countries selected here will automatically move to the form.
                             """)
 ## --------------------------------------------------------------------
+
