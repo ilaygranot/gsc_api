@@ -279,61 +279,71 @@ with tab1:
                     country_operator = 'None'
                 if selected_device == '':
                     device_operator = 'None'
-            # Scan website using Google:
-            final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
-            st.session_state.final_df = final_df
-            if len(final_df) == 0:
-                st.warning("Did not find any records. (" + str(len(final_df)) + ")")
+                # Scan website using Google:
+                final_df = scan_website(property, numberOfRows, type_selectbox, selected_country, country_operator, selected_device, device_operator, start_date, end_date, page_operator, page_expression, query_operator, query_expression)
+                st.session_state.final_df = final_df
+                if len(final_df) == 0:
+                    st.warning("Did not find any records. (" + str(len(final_df)) + ")")
+                else:
+                    # Optionally add the Branded Column if the user has provided a branded keyword:
+                    if branded_kw != '': # If branded_kw is empty then drop branded column
+                        final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
+                    # Preview CSV Data:
+                    st.success("Successfully found " + str(len(final_df)) + " records.")
+                    # Convert DF to CSV and pass it to a global variable used by the download CSV button:
+                    CSV = final_df.to_csv().encode('utf-8')
+                    CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+        # AG Table and Widen UI
+        col1, col2, col3 = st.columns([1, 1, 1])
+        with col1:
+            if 'final_df' in st.session_state:
+                st.caption("")
+                check_box = st.checkbox(
+                    "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
+                )
+                st.caption("")
             else:
-                # Optionally add the Branded Column if the user has provided a branded keyword:
-                if branded_kw != '': # If branded_kw is empty then drop branded column
-                    final_df['Branded'] = final_df['query'].str.contains(branded_kw) # Add Branded Column
-                # Preview CSV Data:
-                st.success("Successfully found " + str(len(final_df)) + " records.")
-                # Convert DF to CSV and pass it to a global variable used by the download CSV button:
-                CSV = final_df.to_csv().encode('utf-8')
-                CSV_DOWNLOADABLE = True # Streamlit forms can't contain multiple buttons
+                check_box = st.empty()
 
-            # Check if user wants to download directly or preview in UI:
-            download_directly = st.checkbox("Download directly", key="download_directly")
+        with col2:
+            if 'final_df' in st.session_state:
+                st.caption("")
+                st.checkbox(
+                    "Widen layout",
+                    key="widen",
+                    help="Tick this box to switch the layout to 'wide' mode",
+                )
+                st.caption("")
 
-            # Download directly if user chooses to do so:
-            if download_directly and CSV_DOWNLOADABLE and CSV is not None:
-                # Generate a file timestamp:
-                current_time = str(datetime.datetime.now())
-                current_time = "_".join(current_time.split()).replace(":","-")
-                current_time = current_time[:-7]
-                # Show the CSV Button:
-                st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
-
-            # Preview the data in the UI if user chooses to do so:
-            if not download_directly:
-                # AG Table and Widen UI
-                col1, col2, col3 = st.columns([1, 1, 1])
-                with col1:
-                    if 'final_df' in st.session_state:
-                        st.caption("")
-                        check_box = st.checkbox(
-                            "Ag-Grid mode", help="Tick this box to see your data in Ag-grid!"
-                        )
-                        st.caption("")
-                    else:
-                        check_box = st.empty()
-
-                with col2:
-                    if 'final_df' in st.session_state:
-                        st.caption("")
-                        st.checkbox(
-                            "Widen layout",
-                            key="widen",
-                            help="Tick this box to switch the layout to 'wide' mode",
-                        )
-                        st.caption("")
-
-                if not check_box:
-                    if 'final_df' in st.session_state:
-                        st.write("Preview:")
-                        st.dataframe(st.session_state.final_df)
+        if not check_box:
+            if 'final_df' in st.session_state:
+                st.write("Preview:")
+                st.dataframe(st.session_state.final_df)
+        elif check_box:
+            if 'final_df' in st.session_state:
+                st.write("Preview:")
+                df = st.session_state.final_df.reset_index()
+                gb = GridOptionsBuilder.from_dataframe(st.session_state.final_df)
+                # enables pivoting on all columns, however i'd need to change ag grid to allow export of pivoted/grouped data, however it select/filters groups
+                gb.configure_default_column(
+                    enablePivot=True, enableValue=True, enableRowGroup=True
+                )
+                gb.configure_selection(selection_mode="multiple", use_checkbox=True)
+                gb.configure_side_bar()
+                gridOptions = gb.build()
+                st.info(
+                    f"""
+                            💡 Tip! Hold the '⇧ Shift' key when selecting rows to select multiple rows at once!
+                            """)
+                response = AgGrid(df, gridOptions=gridOptions, enable_enterprise_modules=True, update_mode=GridUpdateMode.MODEL_CHANGED, data_return_mode=DataReturnMode.FILTERED_AND_SORTED, height=1000, fit_columns_on_grid_load=True, configure_side_bar=True)
+    # D. Show CSV Download Button when CSV data exists:
+    if CSV_DOWNLOADABLE and CSV is not None:
+        # Generate a file timestamp:
+        current_time = str(datetime.datetime.now())
+        current_time = "_".join(current_time.split()).replace(":","-")
+        current_time = current_time[:-7]
+        # Show the CSV Button:
+        st.download_button("Download CSV", CSV, "GSC_API" + "_" + str(numberOfRows) + "_" + current_time + ".csv", "text/csv", key='download-csv')
 
 ## --------------------------------------------------------------------
 
